@@ -1,3 +1,8 @@
+/*
+Useful functions:
+LogAllOut, promoteToAdmin, deleteAccount, banFromMineKhan, unbanFromMineKhan
+*/
+
 const express = require('express');
 const app = express();
 var cookieParser = require('cookie-parser');
@@ -22,6 +27,57 @@ cloudinary.config({
   api_key: '525257699528752', 
   api_secret: process.env['cloudinary_api_secret']
 });
+const nodemailer = require('nodemailer');
+
+let log = []
+async function Log(){
+  var data = []
+  for(var i=0; i<arguments.length; i++){
+    data.push(arguments[i])
+  }
+  console.log(...data)
+  //var log = await db.get("log")
+  //log = log || []
+  log.push(data)
+  await db.set("log", log)
+}
+
+function clearLog(){
+  db.delete("log").then(() => {
+    console.clear()
+    log = []
+  })
+}
+console.clear()
+db.get("log").then(r => {
+  r.forEach(v => {
+    console.log(...v)
+  })
+  log = r
+}).catch(() => {})
+
+var bannedFromMineKhan
+db.get("bannedFromMineKhan").then(r => {
+  if(r){
+    bannedFromMineKhan = r
+    console.log("People banned from MineKhan: "+r.join(", "))
+  }else{
+    bannedFromMineKhan = []
+  }
+})
+function banFromMineKhan(who){
+  db.get("user:"+who).then(r => {
+    if(!r) return console.log(who+" doesn't exsist")
+    bannedFromMineKhan.push(who)
+    db.set("bannedFromMineKhan", bannedFromMineKhan).then(() => console.log("done"))
+  })
+}
+function unbanFromMineKhan(who){
+  var i = bannedFromMineKhan.indexOf(who)
+  if(i === -1) return console.log(who+" is not on the banned list")
+  bannedFromMineKhan.splice(i,1)
+  db.set("bannedFromMineKhan", bannedFromMineKhan).then(() => console.log("done"))
+}
 
 /*var id = 0xf
 function generateId(){
@@ -35,6 +91,44 @@ function generateId(){
   return Date.now()
 }
 
+function valueToString(v, nf){ //for log
+  var str = ""
+  if(typeof v === "function"){
+    str = "<span style='color:purple;'>"+v.toString()+"</span>"
+  }else if(Array.isArray(v)){
+    str = "<span style='color:red;'>["
+    for(var i=0; i<v.length; i++){
+      str += valueToString(v[i], true)+", "
+    }
+    if(v.length)str = str.substring(0, str.length-2) //remove trailing ", "
+    str += "]</span>"
+  }else if(typeof v === "object"){
+    str = "<span style='color:red;'>{"
+    var hasTrailing
+    for(var i in v){
+      str += "<span style='color:blue;'>"+i+"</span>: "+valueToString(v[i], true)+", "
+      hasTrailing = true
+    }
+    if(hasTrailing)str = str.substring(0, str.length-2) //remove trailing ", "
+    str += "}</span>"
+  }else if(typeof v === "number"){
+    str = "<span style='color:orange;'>"+v.toString()+"</span>"
+  }else if(typeof v === "string"){
+    if(v.startsWith("MineKhan")){
+      v = v.replace("MineKhan","<span style='background:yellow;'>MineKhan</span>")
+    }
+    if(v.startsWith("New comment")){
+      v = v.replace("comment","<span style='background:orange;'>comment</span>")
+    }
+    if(v.startsWith("New post")){
+      v = v.replace("post","<span style='background:orange;'>post</span>")
+    }
+    if(nf)str = "<span style='color:green;'>'"+v+"'</span>" 
+    else str = v
+  }else str = v
+  return str
+}
+
 router.get('/', function(req, res){
   res.sendFile(path.join(__dirname, "/info.html"));
 });
@@ -42,6 +136,25 @@ router.get('/', function(req, res){
 router.get('/test', function(req, res){
   res.send("test")
 });
+router.get('/log', async(req,res) => {
+  var log = await db.get("log")
+  if(!log) return res.send("Empty")
+  var str = "<span style='font-family:monospace;'>"
+  log.forEach(v => {
+    v.forEach(r => {
+      str += valueToString(r)+" "
+    })
+    str += "<br>"
+  })
+  str += "</span>"
+  res.send(str)
+})
+router.get("/pfp.png", (req,res) => {
+  res.sendFile(__dirname+"/pfp.png")
+})
+router.get("/panorama", (req,res) => {
+  res.redirect("https://data.thingmaker.repl.co/images/panorama/halloween.png")
+})
 
 function getPostData(req){
   return new Promise(function(resolve){
@@ -91,7 +204,7 @@ function logout(request, res){
     });
     await db.delete("session:"+sid).then(() => {
       resolve()
-    }).catch(console.log)
+    }).catch(e => {Log(e)})
   })
 }
 const validate = async(request, response, next) => {
@@ -103,7 +216,7 @@ const validate = async(request, response, next) => {
         next()
       }).catch((e) => response.status(401).send(/*"Invalid session id"*/""))
   } else {
-    /*response.status(401).send*/console.log("An authorization header is required")
+    /*response.status(401).send*///console.log("Not logged in")
     next()
   }
 }
@@ -111,19 +224,27 @@ async function isAdmin(username){
   var admin
   await db.get("user:"+username).then(r => {
     admin = r.admin
-  }).catch(console.log)
+  }).catch(e => Log(e))
   return admin
 }
 async function notif(data, username){
   await db.get("user:"+username).then(async u => {
-    u.notifs = u.notifs || (u.notifs = [])
+    u.notifs = u.notifs || []
     u.notifs.push({
       notif:data,
       id: generateId(),
       read: false
     })
     await db.set("user:"+username, u).then(() => {})
-  }).catch(console.log)
+  }).catch(e => Log(e))
+}
+function addNotif(data, u){
+  u.notifs = u.notifs || []
+  u.notifs.push({
+    notif:data,
+    id: generateId(),
+    read: false
+  })
 }
 /*router.get('/setuser', (req, res)=>{
   setUser("user", res)
@@ -154,6 +275,10 @@ router.post("/register", async (request, response) => {
     })
   }
 
+  if(request.body.username.match(/[^a-zA-Z0-9\-_]/)){
+    return response.json({message:"Username can only contain characters: A-Z, a-z, 0-9, - and _"})
+  }
+
   var exsists = false
   await db.list("user:"+request.body.username).then(matches => {
     if(matches.length){
@@ -172,7 +297,8 @@ router.post("/register", async (request, response) => {
     "pid": id,
     "username": request.body.username,
     "password": bcrypt.hashSync(request.body.password, 10),
-    pfp: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mOU2jOnHgAEXQHz8u9NVQAAAABJRU5ErkJggg==",
+    email:request.body.email,
+    pfp: "https://server.thingmaker.repl.co/pfp.png",
     timestamp:(new Date()).getTime(),
   }
   
@@ -190,7 +316,7 @@ router.post("/register", async (request, response) => {
             success:true,
             redirect:"/website/website.html"
           })
-          console.log("New user", account.username)
+          Log("New user", account.username)
         })
         .catch(e => response.status(500).send({success:false, message:e}))
   }).catch(e => response.status(500).send({success:false, message:e}));
@@ -243,7 +369,7 @@ router.delete("/deleteAccount", validate, async (request, response) => {
     await db.delete("user:"+request.username)
       .then(() => {
         response.send("deleted")
-        console.log("Deleted user", request.username)
+        Log("Deleted user", request.username)
       })
       .catch((e) => response.status(500).send(e))
   } catch (e) {
@@ -284,6 +410,18 @@ router.post("/changePwd", validate, async(req, res) => {
       res.json({success:true})
     }).catch(e => res.json({message:e}))
   }).catch(e => res.json({message: e}))
+  Log(req.username+" changed their password")
+})
+router.post("/changeEmail", validate, async(req, res) => {
+  if(!req.username) return res.json({message:"Unauthorized"})
+  await getPostData(req)
+  db.get("user:"+req.username).then(r => {
+    r.email = req.body.email
+    db.set("user:"+req.username, r).then(() => {
+      res.json({success:true})
+    }).catch(e => res.json({message:e}))
+  }).catch(e => res.json({message: e}))
+  Log(req.username+" changed their email")
 })
 router.post("/changeBio", validate, async(req, res) => {
   if(!req.username) return res.status(401).json({message:"Unauthorized"})
@@ -292,8 +430,32 @@ router.post("/changeBio", validate, async(req, res) => {
     r.bio = req.body.bio
     db.set("user:"+req.username, r).then(() => {
       res.json({success:true})
+      Log(req.username+" change their bio.")
     }).catch(e => res.json({message:e}))
   }).catch(e => res.json({message: e}))
+})
+router.get("/deleteNotifs", validate, (req,res) => {
+  if(!req.username) return res.status(401).json({message:"Unathorized"})
+  db.get("user:"+req.username).then(r => {
+    delete r.notifs
+    db.set("user:"+req.username, r).then(() => {
+      res.json({success:true})
+      Log(req.username+" deleted their notifications.")
+    }).catch(e => res.json({message:e}))
+  }).catch(e => res.json({message: e}))
+})
+router.get("/pfp/*", async(req,res) => {
+  let username = req.url.split("/").pop()
+  db.get("user:"+username).then(d => {
+    /*fetch(d.pfp, (err,meta,body) => {
+      if(err){
+        console.log(err)
+        return res.send("error")
+      }
+      res.send(body)
+    })*/
+    res.redirect(d.pfp)
+  }).catch(() => res.send("error"))
 })
 router.get("/users", (req, res) => {
   db.list("user:").then((users) => {res.json(users) })
@@ -324,12 +486,11 @@ router.post("/newMedia", async(req,res) => {
     resource_type: currentMedia.type.split("/")[0]
   }, function(error, result){
     if(error){
-      console.log(error)
+      Log(error)
       return res.json({message: error})
     }
     res.json({success:true, url: result.secure_url})
-    console.log("Media id:",id)
-    console.log(result)
+    Log("Media id:",id)
   })
 })
 // user makes a post/blog
@@ -357,30 +518,37 @@ router.post("/post", validate, async(request, response) => {
         data:blog,
         redirect: "/website/post.html?id="+uniqueId
       })
-      console.log("New post", blog.title)
+      Log("New post", blog.title)
     })
     .catch((e) => response.status(500).json({message:e}))
 })
 router.delete("/deletePost/*", validate, async(req, res) => {
   let id = req.url.split("/").pop()
   var canDelete = false
+  var adminDelete = false
   var title
+  var author
   await db.get("post:"+id).then(async r => {
     title = r.title
+    author = r.username
     if(req.username === r.username){
       canDelete = true
     }else{
       await db.get("user:"+req.username).then(u => {
-        if(u.admin) canDelete = true
+        if(u.admin){
+          canDelete = true
+          adminDelete = true
+        }
       }).catch(() => res.send("error"))
     }
   }).catch(() => res.send("error"))
 
   if(!canDelete) return res.status(401).send("Your'e not authorized")
-  db.delete("post:"+id).then(() => {
+  db.delete("post:"+id).then(async() => {
+    if(adminDelete) await notif(req.username+" deleted your post: "+title, author)
     res.send("ok")
-    console.log("Deleted post", title)
-  }).catch(() => res.send("error"))
+    Log("Deleted post", title)
+  }).catch(e => {res.send("error"); console.log(e)})
 })
 //get a post by its id
 router.get("/post/*", (request, res) => {
@@ -397,7 +565,12 @@ router.get("/posts/*", (req, res) => {
     for(var i=0; i<matches.length; i++){
       await db.get(matches[i]).then(r => {
         if(r.username === username){
-          posts.push(r)
+          posts.push({
+            username:r.username,
+            id:r.id,
+            title:r.title,
+            timestamp:r.timestamp
+          })
         }
       })
     }
@@ -409,7 +582,12 @@ router.get("/posts", (req, res) => {
     var posts = []
     for(var i=0; i<matches.length; i++){
       await db.get(matches[i]).then(r => {
-        posts.push(r)
+        posts.push({
+          username:r.username,
+          id:r.id,
+          title:r.title,
+          timestamp:r.timestamp
+        })
       })
     }
     res.json(posts)
@@ -434,23 +612,32 @@ router.post("/commentPost/*", validate, async(req, res) => {
     r.comments = r.comments || []
     var commentData = {
       username:req.username,
-      pfp:pfp,
+      //pfp:pfp,
       comment:req.body.comment,
-      id: cid
+      id: cid,
+      timestamp:(new Date()).getTime()
     }
     r.comments.push(commentData)
     if(r.followers){
       for(var i=0; i<r.followers.length; i++){
         if(r.followers[i] !== req.username){
           await db.get("user:"+r.followers[i]).then(async u => {
+            if(!u){
+              var who = r.followers[i]
+              Log(who+" doesn't exsist but is following "+r.title)
+              r.followers.splice(i, 1)
+              i --
+              Log("Removed "+who+" from following "+r.title)
+              return
+            }
             u.notifs = u.notifs || []
             u.notifs.push({
-              notif:"New comment at <a href='/website/post.html?id="+id+"#comment"+cid+"'>"+r.title+"</a>",
+              notif: req.username+" commented at <a href='/website/post.html?id="+id+"#comment"+cid+"'>"+r.title+"</a>",
               id: generateId(),
               read: false
             })
             await db.set("user:"+r.followers[i], u).then(() => {})
-          }).catch(console.log)
+          }).catch(e => Log(e))
         }
       }
     }
@@ -460,10 +647,46 @@ router.post("/commentPost/*", validate, async(req, res) => {
         type:"comment",
         data:commentData
       }, id, req.body.userId)
-      console.log("New comment at", r.title)
+      Log("New comment at", r.title)
     })
   }).catch(() => {
     res.json({message:"Post doesn't exsist"})
+  })
+})
+router.post("/deletePostComment/*", validate, async(req,res) => {
+  if(!req.username) return res.status(401).send("error")
+  let id = req.url.split("/").pop()
+  await getPostData(req)
+  db.get("post:"+id).then(async d => {
+    var canDelete, sendNotif
+    let cid = req.body.cid
+    var c
+    for(var i=0; i<d.comments.length; i++){
+      if(d.comments[i].id == cid){
+        c = d.comments[i]
+        break
+      }
+    }
+    if(c.username === req.username){//creator of comment delete the comment
+      canDelete = true
+    }else if(req.username === d.username){//creator of post delete the comment
+      sendNotif = canDelete = true
+    }else{//admin delete comment
+      await db.get("user:"+req.username).then(r => {
+        if(r.admin) sendNotif = canDelete = true
+      })
+    }
+    if((!c) || (!canDelete)) return res.send("error")
+    c.hide = true
+    db.set("post:"+id, d).then(async() => {
+      res.send("ok")
+      if(sendNotif) await notif(req.username+" deleted your comment at: "+d.title, c.username)
+      sendPostWs({
+        type:"deleteComment",
+        data: cid
+      }, id, req.body.userId)
+      Log("Deleted comment at", d.title)
+    })
   })
 })
 router.post("/followPost/*", validate, async(req, res) => {
@@ -498,11 +721,61 @@ router.get("/clearNotifs", validate, (req, res) => {
       var n = r.notifs[i]
       n.read = true
     }
-    db.set("user:"+req.username, r).then(() => res.send("cleared")).catch(console.log)
-  }).catch(console.log)
+    db.set("user:"+req.username, r).then(() => res.send("cleared")).catch(e => Log(e))
+  }).catch(e => Log(e))
 })
+
+router.post("/resetPwd", async (req,res) => {
+  return res.json({message:"Functionality not available yet"})
+
+  await getPostData(req)
+  var username = req.body.username
+  db.get("user:"+username).then(r => {
+    if(!r) return res.json({message:"That account doesn;t exsist."})
+    var email = r.email || ""
+    if(!email){
+      return res.json({message:"Sorry, that account doesn't have an email."})
+    }
+    var transport = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 2525,
+      auth: {
+        user: "aarontao950@gmail.com",
+        pass: process.env['gmail_pass']
+      }
+    });
+    var message = {
+      from: "reset_password@thingmaker.repl.co",
+      to: email,
+      subject: "Reset Password",
+      html: `
+<h1>So, you decided to reset your password, huh?</h1>
+<p>All you have to do is follow the instructions.</p>
+<ol>
+  <li>Click <a>here</a></li>
+</ol>
+`
+    }
+    transport.sendMail(message, function(err, info) {
+      if (err) {
+        res.json({message:JSON.stringify(err)})
+      } else {
+        Log("Reset password email sent to "+req.username,info);
+        res.json({success:true})
+      }
+    })
+  })
+})
+
 router.get("/sessions", (req, res) => {
-  db.list("session:").then((d) => {res.json(d) })
+  const pwd = process.env['pwd']
+  var urlData = url.parse(req.url,true)
+  var q = urlData.query.pwd
+  if(q === pwd){
+    db.list("session:").then((d) => {res.json(d) })
+  }else{
+    res.sendFile(__dirname+"/401.html")
+  }
 })
 
 //for minekhan
@@ -523,6 +796,21 @@ router.get("/worlds", (req, res) => {
   }
   res.json(data)
 })
+router.get("/worldsPing", (req, res) => {
+  var w = []
+  for(var i=0; i<worlds.length; i++){
+    var world = worlds[i]
+    w.push(pingWorld(world.id))
+  }
+  Promise.all(w).then(w => {
+    var data = {}
+    for(var i=0; i<w.length; i++){
+      data[worlds[i].id] = w[i]
+    }
+    res.json(data)
+  })
+})
+
 router.post("/admin/messageUser/*", validate, async(req,res) => {
   if(!await isAdmin(req.username)) return res.json({message:"Unauthorized"})
   await getPostData(req)
@@ -541,6 +829,29 @@ app.use(function(req, res, next) {
 let serverPort = app.listen(3000, function(){
   console.log("App server is running on port 3000");
 });
+
+function LogAllOut(){
+  db.list("session:").then(m => {
+    var p = []
+    for(var i=0; i<m.length; i++){
+      p.push(db.delete(m[i]))
+    }
+    Promise.all(p).then(() => {
+      console.log("Done")
+    })
+  })
+}
+function deleteAccount(username){
+  db.delete("user:"+username).then(() => console.log("done"))
+}
+function promoteToAdmin(username){
+  db.get("user:"+username).then(r =>{
+    if(!r) return console.log("user doesn't exsist")
+    r.admin = true
+    addNotif("You have been promoted to admin",r)
+    db.set("user:"+username, r).then(() => console.log("done"))
+  })
+}
 
 //WebSocket
 class WebSocketRoom{
@@ -591,10 +902,41 @@ worlds.find = (id) => {
     }
   }
 }
+worlds.pings = {}
+async function pingWorld(id){
+  var w = worlds.find(id)
+  if(!w) return "error"
+  var start = Date.now()
+  var ms = await new Promise((resolve,reject) => {
+    var resolved = false
+    worlds.pings[id] = {
+      id: id,
+      done: f => {
+        var finish = Date.now()
+        var ms = (finish - start) / 2
+        resolve(ms)
+        resolved = true
+      }
+    }
+    w.host.sendUTF(JSON.stringify({
+      type:"ping"
+    }))
+    setTimeout(() => {
+      if(!resolved){
+        resolve("timeout")
+      }
+    }, 20000)
+  })
+  return ms
+}
 minekhanWs.onrequest = function(request, connection, urlData) {
   const queryObject = urlData.query
-  var target = queryObject.target || 0
-  console.log("Client connected: ", queryObject)
+  var target = queryObject.target
+  if(!(target||target===0)){
+    connection.close()
+    return
+  }
+  Log("MineKhan: Client connected: ", queryObject)
   //add user to a world
   var world = worlds.find(target)
   if(world){
@@ -608,7 +950,6 @@ minekhanWs.onrequest = function(request, connection, urlData) {
     }
     worlds.push(world)
   }
-  console.log(worlds.length+" worlds")
   function sendPlayers(msg){
     for(var i=0; i<world.players.length; i++){
       var p = world.players[i]
@@ -624,6 +965,9 @@ minekhanWs.onrequest = function(request, connection, urlData) {
         p.sendUTF(msg)
       }
     }
+  }
+  function sendThisPlayer(msg){
+    connection.sendUTF(msg)
   }
   function sendPlayerName(msg, to){
     for(var i=0; i<world.players.length; i++){
@@ -652,41 +996,80 @@ minekhanWs.onrequest = function(request, connection, urlData) {
   connection.on('message', function(message) {
     var data = JSON.parse(message.utf8Data)
     if(data.type === "connect"){
+      if(bannedFromMineKhan.includes(data.username)){
+        sendThisPlayer(JSON.stringify({
+          type:"error",
+          data:"You are banned from MineKhan."
+        }))
+        connection.close()
+      }
+
       connection.id = data.id
       connection.username = data.username
       sendPlayers(JSON.stringify({
         type:"message",
-        data: data.username+" joined. "+world.players.length+" players now.",
-        username: "Server"
+        data: data.username+" is connecting. "+world.players.length+" players now.",
+        username: "Server",
+        fromServer:true
+      }))
+      Log("MineKhan: "+data.username+" joined the server: "+world.name)
+    }else if(data.type === "joined"){
+      sendPlayers(JSON.stringify({
+        type:"message",
+        data: data.username+" joined. ",
+        username: "Server",
+        fromServer:true
       }))
     }else if(data.type === "init"){
       world.name = data.name
-    }else if(data.type === "pos" || data.type === "setBlock" || data.type === "getSave" || data.type === "message"){
+      Log("MineKhan: Server opened: "+world.name, worlds.length+" worlds")
+    }else if(data.type === "pong"){
+      var p = worlds.pings[world.id]
+      if(p){
+        p.done(data.data)
+      }
+    }else if(data.type === "pos" || data.type === "setBlock" || data.type === "getSave" || data.type === "message" || data.type === "entityPos" || data.type === "entityPosAll" || data.type === "entityDelete" || data.type === "die" || data.type === "harmEffect" || data.type === "achievment" || data.type === "playSound"){
       sendPlayers(message.utf8Data)
-    }else if(data.type === "loadSave"){
+    }else if(data.type === "loadSave" || data.type === "hit"){
       sendPlayer(message.utf8Data, data.TO)
     }else if(data.type === "kill"){
       if(data.data === "@a"){
-        sendPlayers(JSON.stringify({type:"kill"}))
+        sendPlayers(JSON.stringify({type:"kill",data:data.message}))
       }else{
-        sendPlayerName('{"type":"kill"}', data.data)
+        sendPlayerName(JSON.stringify({
+          type:"kill",
+          data:data.message
+        }), data.data)
       }
     }else if(data.type === "ban"){
       sendPlayerName(JSON.stringify({
         type:"error",
         data: "You've been banned from this world."
       }), data.data)
+      Log("MineKhan: "+data.data+" got banned from the server: "+world.name)
       closePlayer(data.data)
+    }else if(data.type === "fetchUsers"){
+      var arr = []
+      world.players.forEach(u => {
+        arr.push(u.username)
+      })
+      sendPlayer(JSON.stringify({
+        type:"message",
+        username:"Server",
+        data:arr.join(", "),
+        fromServer:true
+      }), data.FROM)
     }
   });
   connection.on('close', function(reasonCode, description) {
-    console.log('Client has disconnected.');
-    
     var idx = world.players.indexOf(connection)
     if(connection === world.host){
+      var name = world.name
+      var playerAmount = world.players.length
       closePlayers()
       worlds.splice(worlds.indexOf(world), 1)
       world = {}
+      Log("MineKhan: Server closed: "+name+" with "+playerAmount+" people", worlds.length+" worlds")
     }else{
       sendPlayers(JSON.stringify({
         type:"dc",
@@ -695,8 +1078,10 @@ minekhanWs.onrequest = function(request, connection, urlData) {
       sendPlayers(JSON.stringify({
         type:"message",
         data: world.players[idx].username+" left. "+(world.players.length-1)+" players now.",
-        username: "Server"
+        username: "Server",
+        fromServer:true
       }))
+      Log("MineKhan: "+world.players[idx].username+" left the server: "+world.name)
       world.players.splice(idx, 1)
     }
   });

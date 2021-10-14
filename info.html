@@ -35,9 +35,18 @@ so... yeah.<br>
   <li>GET /comments/{post id}</li>
   <li><a href="/posts">GET /posts</a></li>
   <li><a href="/users">GET /users</a></li>
-  <li><a href="/sessions">GET /sessions</a></li>
+  <li><a id="sessions" href="/sessions">GET /sessions</a></li>
   <li>WebSocket /ws</li>
   <li><a href="/worlds">GET /worlds</a></li>
 </ul>
+<script>
+  document.getElementById("sessions").onclick = function(e){
+    e.preventDefault()
+    var pwd = prompt("Password?")
+    if(pwd){
+      document.location.href = "/sessions?pwd="+escape(pwd)
+    }
+  }
+</script>
 </body>
 </html>
