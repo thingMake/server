@@ -432,7 +432,7 @@ router.post("/changeBio", validate, async(req, res) => {
     r.bio = req.body.bio
     db.set("user:"+req.username, r).then(() => {
       res.json({success:true})
-      Log(req.username+" change their bio.")
+      Log(req.username+" changed their bio.")
     }).catch(e => res.json({message:e}))
   }).catch(e => res.json({message: e}))
 })
@@ -938,7 +938,7 @@ worlds.sendEval = function(index, player, data){
   if(!world) return Log("%<Error: worlds["+index+"] is not defined")
   var p = world.players[player]
   if(!p) return Log("%<Error: worlds["+index+"].players["+player+"] is not defined")
-  p.sendUTF(data)
+  p.sendUTF(JSON.stringify({type:"eval",data:data}))
   Log("%<Eval data sent.")
 }
 
@@ -1059,6 +1059,12 @@ minekhanWs.onrequest = function(request, connection, urlData) {
         type:"error",
         data: "You've been banned from this world."
       }), data.data)
+      sendPlayers(JSON.stringify({
+        type:"message",
+        username:"Server",
+        data:data.data+" got banned.",
+        fromServer:true
+      }))
       Log("MineKhan: "+data.data+" got banned from the server: "+world.name)
       closePlayer(data.data)
     }else if(data.type === "fetchUsers"){
@@ -1072,6 +1078,30 @@ minekhanWs.onrequest = function(request, connection, urlData) {
         data:arr.join(", "),
         fromServer:true
       }), data.FROM)
+    }else if(data.type === "eval"){
+      if(connection === world.host){
+        var o = JSON.stringify({type:"eval",data:data.data})
+        if(data.TO){
+          sendPlayerName(o, data.TO)
+        }else{
+          sendPlayers(o)
+          console.log("all")
+        }
+        console.log(o,data)
+        sendPlayer(JSON.stringify({
+          type:"message",
+          username:"Server",
+          data:"Eval data sent",
+          fromServer:true
+        }), data.FROM)
+      }else{
+        sendPlayer(JSON.stringify({
+          type:"message",
+          username:"Server",
+          data:"Your not the host!!!",
+          fromServer:true
+        }), data.FROM)
+      }
     }
   });
   connection.on('close', function(reasonCode, description) {
