@@ -5,7 +5,7 @@ LogAllOut, promoteToAdmin, deleteAccount, banFromMineKhan, unbanFromMineKhan
 
 const express = require('express');
 const app = express();
-var cookieParser = require('cookie-parser');
+const cookieParser = require('cookie-parser');
 app.use(cookieParser());
 const router = express.Router();
 const path = require('path')
@@ -31,52 +31,52 @@ const nodemailer = require('nodemailer');
 
 let log = []
 async function Log(){
-  var data = []
-  for(var i=0; i<arguments.length; i++){
+  const data = []
+  for(let i = 0; i < arguments.length; i++){
     data.push(arguments[i])
   }
   console.log(...data)
-  //var log = await db.get("log")
-  //log = log || []
-  log.push(data)
-  await db.set("log", log)
+  //let log = await db.get("log");
+  //log = log || [];
+  log.push(data);
+  await db.set("log", log);
 }
 
-function clearLog(){
+function clearLog() {
   db.delete("log").then(() => {
-    console.clear()
-    log = []
+    console.clear();
+    log = [];
   })
 }
-console.clear()
+console.clear();
 db.get("log").then(r => {
   r.forEach(v => {
     console.log(...v)
   })
-  log = r
-}).catch(() => {})
+  log = r;
+}).catch(() => {});
 
-var bannedFromMineKhan
+let bannedFromMineKhan;
 db.get("bannedFromMineKhan").then(r => {
-  if(r){
-    bannedFromMineKhan = r
-    console.log("People banned from MineKhan: "+r.join(", "))
-  }else{
-    bannedFromMineKhan = []
+  if (r) {
+    bannedFromMineKhan = r;
+    console.log("People banned from MineKhan: "+r.join(", "));
+  } else {
+    bannedFromMineKhan = [];
   }
 })
-function banFromMineKhan(who){
-  db.get("user:"+who).then(r => {
-    if(!r) return console.log(who+" doesn't exsist")
-    bannedFromMineKhan.push(who)
-    db.set("bannedFromMineKhan", bannedFromMineKhan).then(() => console.log("done"))
-  })
+function banFromMineKhan(who) {
+  db.get("user:" + who).then(r => {
+    if(!r) return console.log(who+" doesn't exsist");
+    bannedFromMineKhan.push(who);
+    db.set("bannedFromMineKhan", bannedFromMineKhan).then(() => console.log("done"));
+  });
 }
-function unbanFromMineKhan(who){
-  var i = bannedFromMineKhan.indexOf(who)
-  if(i === -1) return console.log(who+" is not on the banned list")
-  bannedFromMineKhan.splice(i,1)
-  db.set("bannedFromMineKhan", bannedFromMineKhan).then(() => console.log("done"))
+function unbanFromMineKhan(who) {
+  const i = bannedFromMineKhan.indexOf(who);
+  if(i === -1) return console.log(who+" is not on the banned list");
+  bannedFromMineKhan.splice(i, 1);
+  db.set("bannedFromMineKhan", bannedFromMineKhan).then(() => console.log("done"));
 }
 
 /*var id = 0xf
@@ -85,63 +85,63 @@ function generateId(){
   return id.toString(64)
 }*/
 //var genid = 0
-function generateId(){
+function generateId() {
   //genid ++
   //return genid
-  return Date.now()
+  return Date.now();
 }
 
-function valueToString(v, nf){ //for log
-  var str = ""
-  if(typeof v === "function"){
+function valueToString(v, nf) { //for log
+  let str = "";
+  if (typeof v === "function") {
     str = "<span style='color:purple;'>"+v.toString()+"</span>"
-  }else if(Array.isArray(v)){
+  } else if(Array.isArray(v)){
     str = "<span style='color:red;'>["
-    for(var i=0; i<v.length; i++){
+    for(let i = 0; i < v.length; i++){
       str += valueToString(v[i], true)+", "
     }
-    if(v.length)str = str.substring(0, str.length-2) //remove trailing ", "
-    str += "]</span>"
-  }else if(typeof v === "object"){
-    str = "<span style='color:red;'>{"
-    var hasTrailing
-    for(var i in v){
-      str += "<span style='color:blue;'>"+i+"</span>: "+valueToString(v[i], true)+", "
-      hasTrailing = true
+    if (v.length) str = str.substring(0, str.length - 2); //remove trailing ", "
+    str += "]</span>";
+  } else if (typeof v === "object") {
+    str = "<span style='color:red;'>{";
+    let hasTrailing;
+    for(let i in v){
+      str += "<span style='color:blue;'>" + i + "</span>: " + valueToString(v[i], true) + ", ";
+      hasTrailing = true;
     }
     if(hasTrailing)str = str.substring(0, str.length-2) //remove trailing ", "
     str += "}</span>"
-  }else if(typeof v === "number"){
-    str = "<span style='color:orange;'>"+v.toString()+"</span>"
-  }else if(typeof v === "string"){
-    if(v.startsWith("MineKhan")){
-      v = v.replace("MineKhan","<span style='background:yellow;'>MineKhan</span>")
+  } else if (typeof v === "number") {
+    str = "<span style='color:orange;'>"+v.toString()+"</span>";
+  } else if (typeof v === "string" ) {
+    if (v.startsWith("MineKhan")) {
+      v = v.replace("MineKhan","<span style='background:yellow;'>MineKhan</span>");
     }
-    if(v.startsWith("New comment")){
-      v = v.replace("comment","<span style='background:orange;'>comment</span>")
+    if (v.startsWith("New comment")) {
+      v = v.replace("comment","<span style='background:orange;'>comment</span>");
     }
-    if(v.startsWith("New post")){
-      v = v.replace("post","<span style='background:orange;'>post</span>")
+    if (v.startsWith("New post")) {
+      v = v.replace("post","<span style='background:orange;'>post</span>");
     }
-    v = v.replace(/%>/g, "<b style='color:orange; margin-right:15px;'>&gt;</b>")
-    v = v.replace(/%</g, "<b style='color:orange; margin-right:15px;'>&nbsp;</b>")//⋖
-    if(nf)str = "<span style='color:green;'>'"+v+"'</span>" 
-    else str = v
-  }else str = v
-  return str
+    v = v.replace(/%>/g, "<b style='color:orange; margin-right:15px;'>&gt;</b>");
+    v = v.replace(/%</g, "<b style='color:orange; margin-right:15px;'>&nbsp;</b>"); //⋖
+    if (nf) str = "<span style='color:green;'>'" + v + "'</span>";
+    else str = v;
+  } else str = v;
+  return str;
 }
 
-router.get('/', function(req, res){
+router.get('/', function(req, res) {
   res.sendFile(path.join(__dirname, "/info.html"));
 });
 
-router.get('/test', function(req, res){
-  res.send("test")
+router.get('/test', function(req, res) {
+  res.send("test");
 });
 router.get('/log', async(req,res) => {
-  var log = await db.get("log")
-  if(!log) return res.send("Empty")
-  var str = "<span style='font-family:monospace;'>"
+  const log = await db.get("log");
+  if (!log) return res.send("Empty");
+  let str = "<span style='font-family:monospace;'>";
   log.forEach(v => {
     v.forEach(r => {
       str += valueToString(r)+" "
@@ -152,146 +152,148 @@ router.get('/log', async(req,res) => {
   res.send(str)
 })
 router.get("/pfp.png", (req,res) => {
-  res.sendFile(__dirname+"/pfp.png")
+  res.sendFile(__dirname+"/pfp.png");
 })
 router.get("/panorama", (req,res) => {
-  res.redirect("https://data.thingmaker.repl.co/images/panorama/halloween.png")
+  res.redirect("https://data.thingmaker.repl.co/images/panorama/halloween.png");
 })
 
 function getPostData(req){
-  return new Promise(function(resolve){
+  return new Promise(function(resolve) {
     let body = '';
     req.on('data', chunk => {
       body += chunk.toString(); // convert Buffer to string
     });
     req.on('end', () => {
-      body = JSON.parse(body)
-      req.body = body
-      resolve(body)
+      body = JSON.parse(body);
+      req.body = body;
+      resolve(body);
     });
   })
 }
 function getPostText(req){
-  return new Promise(function(resolve){
+  return new Promise(function(resolve) {
     let body = '';
     req.on('data', chunk => {
       body += chunk.toString(); // convert Buffer to string
     });
     req.on('end', () => {
-      req.body = body
-      resolve(body)
+      req.body = body;
+      resolve(body);
     });
   })
 }
 //cookies to see if you logged in
-function setUser(sid, res){
+function setUser(sid, res) {
   return res.cookie("sid", sid, {
-    maxAge:4000000000,
+    maxAge: 4000000000,
     path: "/",
     domain: ".thingmaker.repl.co"
   });
 }
 function logout(request, res){
   return new Promise(async (resolve, reject) => {
-    var sid = request.cookies.sid
+    const sid = request.cookies.sid;
     /*res.cookie("sid", "", {
-      maxAge:0,
+      maxAge: 0,
       path: "/",
       domain: ".thingmaker.repl.co"
     });*/
     res.clearCookie("sid",{
-      maxAge:0,
+      maxAge: 0,
       path: "/",
       domain: ".thingmaker.repl.co"
     });
-    await db.delete("session:"+sid).then(() => {
-      resolve()
-    }).catch(e => {Log(e)})
+    await db.delete("session:" + sid).then(() => {
+      resolve();
+    }).catch(e => {Log(e)});
   })
 }
-const validate = async(request, response, next) => {
-  var sid = request.cookies ? request.cookies.sid : null
-  if(sid) {
-    await db.get("session:"+sid)
+async function (request, response, next) => {
+  const sid = request.cookies ? request.cookies.sid : null;
+  if (sid) {
+    await db.get("session:"+sid);
       .then(async(result) => {
-        request.username = result.username
-        next()
-      }).catch((e) => response.status(401).send(/*"Invalid session id"*/""))
+        request.username = result.username;
+        next();
+      }).catch((e) => response.status(401).send(/*"Invalid session id"*/""));
   } else {
     /*response.status(401).send*///console.log("Not logged in")
-    next()
+    next();
   }
 }
 async function isAdmin(username){
-  var admin
+  let admin;
   await db.get("user:"+username).then(r => {
-    admin = r.admin
-  }).catch(e => Log(e))
-  return admin
+    admin = r.admin;
+  }).catch(e => Log(e));
+  return admin;
 }
 async function notif(data, username){
   await db.get("user:"+username).then(async u => {
-    u.notifs = u.notifs || []
+    u.notifs = u.notifs || [];
     u.notifs.push({
       notif:data,
       id: generateId(),
       read: false
     })
-    await db.set("user:"+username, u).then(() => {})
-  }).catch(e => Log(e))
+    await db.set("user:"+username, u).then(() => {});
+  }).catch(e => Log(e));
 }
 function addNotif(data, u){
-  u.notifs = u.notifs || []
+  u.notifs = u.notifs || [];
   u.notifs.push({
     notif:data,
     id: generateId(),
     read: false
-  })
+  });
 }
 /*router.get('/setuser', (req, res)=>{
   setUser("user", res)
   res.send('user data added to cookie');
 });
 app.use('/setuser', router);*/
-router.get('/getuser', validate, (req, res)=>{
-  res.header("Content-Type", "text/plain")
-  if(req.username){
-    res.send(req.username)
-    return
+router.get('/getuser', validate, (req, res) => {
+  res.header("Content-Type", "text/plain");
+  if (req.username) {
+    res.send(req.username);
+    return;
   }
-  res.send("")
+  res.send("");
 });
 
 router.post("/register", async (request, response) => {
-  await getPostData(request)
+  await getPostData(request);
 
   if (!request.body.password) {
     return response.status(401).json({
       success: false,
       "message": "A `password` is required"
-    })
-  }else if (!request.body.username) {
+    });
+  } else if (!request.body.username) {
     return response.status(401).json({
       success: false,
       "message": "A `username` is required"
-    })
+    });
   }
 
-  if(request.body.username.match(/[^a-zA-Z0-9\-_]/)){
-    return response.json({message:"Username can only contain characters: A-Z, a-z, 0-9, - and _"})
+  if (request.body.username.match(/[^a-zA-Z0-9\-_]/)) {
+    return response.json({message:"Username can only contain characters: A-Z, a-z, 0-9, - and _"});
   }
 
-  var exsists = false
-  await db.list("user:"+request.body.username).then(matches => {
-    if(matches.length){
-      exsists = true
+  let exsists = false
+  await db.list("user:" + request.body.username).then(matches => {
+    if (matches.length) {
+      exsists = true;
       response.status(401).json({
         success: false,
         message: "Account already exsists"
-      })
+      });
     }
-  }).catch(() => exsists = false)
-  if(exsists){return}
+  }).catch(() => exsists = false);
+  if (exsists) {
+    return
+  }
 
   const id = generateId()
   const account = {
@@ -305,53 +307,53 @@ router.post("/register", async (request, response) => {
   }
   
   db.set("user:"+account.username, account).then(() => {
-    var session = {
+    const session = {
         "type": "session",
         "id": generateId(),
         "pid": account.pid,
         "username": account.username
     }
-    db.set("session:"+session.id, session)
+    db.set("session:" + session.id, session)
         .then(() => {
-          setUser(session.id, response)
+          setUser(session.id, response);
           response.json({
             success:true,
             redirect:"/website/website.html"
-          })
-          Log("New user", account.username)
+          });
+          Log("New user", account.username);
         })
-        .catch(e => response.status(500).send({success:false, message:e}))
+        .catch(e => response.status(500).send({success:false, message:e}));
   }).catch(e => response.status(500).send({success:false, message:e}));
 })
 
 router.post('/login', async (request, response) => {
-  await getPostData(request)
+  await getPostData(request);
   if (!request.body.username) {
-    return response.status(401).send({success:false, "message": "An `username` is required" })
+    return response.status(401).send({success:false, "message": "An `username` is required" });
   } else if (!request.body.password) {
-    return response.status(401).send({success:false, "message": "A `password` is required" })
+    return response.status(401).send({success:false, "message": "A `password` is required" });
   }
   
-  await db.get("user:"+request.body.username)
+  await db.get("user:" + request.body.username)
     .then(async (result) => {
       if (!bcrypt.compareSync(request.body.password, result.password)) {
         return response.status(500).send({success:false, "message": "Password invalid" })
       }
-      var session = {
+      const session = {
         "type": "session",
         "id": generateId(),
         "pid": result.pid,
         "username": result.username
       }
-      await db.set("session:"+session.id, session)
+      await db.set("session:" + session.id, session)
         .then(() => {
           setUser(session.id, response)
           response.json({
             success:true,
             redirect:"/website/website.html"
-          })
-        }).catch(e => response.status(500).send({success:false, message:e}))
-    }).catch(e => response.status(500).send(e))
+          });
+        }).catch(e => response.status(500).send({success:false, message:e}));
+    }).catch(e => response.status(500).send(e));
 });
 router.get("/account", validate, async (request, response) => {
   if(!request.username) return response.status(401).send('"Unauthorized"')
