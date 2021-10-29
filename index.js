@@ -301,7 +301,7 @@ router.post("/register", async (request, response) => {
     "password": bcrypt.hashSync(request.body.password, 10),
     email:request.body.email,
     pfp: "https://server.thingmaker.repl.co/pfp.png",
-    timestamp:(new Date()).getTime(),
+    timestamp:Date.now(),
   }
   
   db.set("user:"+account.username, account).then(() => {
@@ -511,7 +511,7 @@ router.post("/post", validate, async(request, response) => {
     "title": request.body.title,
     "content": request.body.content,
     "followers":[request.username],
-    "timestamp": (new Date()).getTime()
+    "timestamp": Date.now()
   }
   db.set("post:"+uniqueId, blog)
     .then(() => {
@@ -617,7 +617,7 @@ router.post("/commentPost/*", validate, async(req, res) => {
       //pfp:pfp,
       comment:req.body.comment,
       id: cid,
-      timestamp:(new Date()).getTime()
+      timestamp:Date.now()
     }
     r.comments.push(commentData)
     if(r.followers){
