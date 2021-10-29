@@ -29,13 +29,13 @@ cloudinary.config({
 });
 const nodemailer = require('nodemailer');
 
-let log = []
-async function Log(){
-  const data = []
-  for(let i = 0; i < arguments.length; i++){
-    data.push(arguments[i])
+let log = [];
+async function Log() {
+  const data = [];
+  for (let i = 0; i < arguments.length; i++) {
+    data.push(arguments[i]);
   }
-  console.log(...data)
+  console.log(...data);
   //let log = await db.get("log");
   //log = log || [];
   log.push(data);
@@ -79,8 +79,8 @@ function unbanFromMineKhan(who) {
   db.set("bannedFromMineKhan", bannedFromMineKhan).then(() => console.log("done"));
 }
 
-/*var id = 0xf
-function generateId(){
+/*let id = 0xf
+function generateId() {
   id += Math.floor(Math.random() * 10)
   return id.toString(64)
 }*/
@@ -88,17 +88,18 @@ function generateId(){
 function generateId() {
   //genid ++
   //return genid
-  return Date.now();
+  // not sure if this works if two ids are generated at the same time so I'll change it
+  return (Date.now() | performance.now()) & Math.random();
 }
 
 function valueToString(v, nf) { //for log
   let str = "";
   if (typeof v === "function") {
-    str = "<span style='color:purple;'>"+v.toString()+"</span>"
-  } else if(Array.isArray(v)){
-    str = "<span style='color:red;'>["
-    for(let i = 0; i < v.length; i++){
-      str += valueToString(v[i], true)+", "
+    str = "<span style='color:purple;'>"+v.toString()+"</span>";
+  } else if (Array.isArray(v)) {
+    str = "<span style='color:red;'>[";
+    for (let i = 0; i < v.length; i++) {
+      str += valueToString(v[i], true) + ", ";
     }
     if (v.length) str = str.substring(0, str.length - 2); //remove trailing ", "
     str += "]</span>";
@@ -109,11 +110,11 @@ function valueToString(v, nf) { //for log
       str += "<span style='color:blue;'>" + i + "</span>: " + valueToString(v[i], true) + ", ";
       hasTrailing = true;
     }
-    if(hasTrailing)str = str.substring(0, str.length-2) //remove trailing ", "
-    str += "}</span>"
+    if (hasTrailing) str = str.substring(0, str.length - 2); //remove trailing ", "
+    str += "}</span>";
   } else if (typeof v === "number") {
     str = "<span style='color:orange;'>"+v.toString()+"</span>";
-  } else if (typeof v === "string" ) {
+  } else if (typeof v === "string") {
     if (v.startsWith("MineKhan")) {
       v = v.replace("MineKhan","<span style='background:yellow;'>MineKhan</span>");
     }
@@ -135,21 +136,21 @@ router.get('/', function(req, res) {
   res.sendFile(path.join(__dirname, "/info.html"));
 });
 
-router.get('/test', function(req, res) {
+router.get('/test', function (req, res) {
   res.send("test");
 });
-router.get('/log', async(req,res) => {
+router.get('/log', async (req,res) => {
   const log = await db.get("log");
   if (!log) return res.send("Empty");
   let str = "<span style='font-family:monospace;'>";
   log.forEach(v => {
     v.forEach(r => {
-      str += valueToString(r)+" "
-    })
-    str += "<br>"
-  })
-  str += "</span>"
-  res.send(str)
+      str += valueToString(r) + " "
+    });
+    str += "<br>";
+  });
+  str += "</span>";
+  res.send(str);
 })
 router.get("/pfp.png", (req,res) => {
   res.sendFile(__dirname+"/pfp.png");
@@ -209,7 +210,7 @@ function logout(request, res){
     }).catch(e => {Log(e)});
   })
 }
-async function (request, response, next) => {
+async function validate(request, response, next) => {
   const sid = request.cookies ? request.cookies.sid : null;
   if (sid) {
     await db.get("session:"+sid);
@@ -236,14 +237,14 @@ async function notif(data, username){
       notif:data,
       id: generateId(),
       read: false
-    })
+    });
     await db.set("user:"+username, u).then(() => {});
   }).catch(e => Log(e));
 }
 function addNotif(data, u){
   u.notifs = u.notifs || [];
   u.notifs.push({
-    notif:data,
+    notif: data,
     id: generateId(),
     read: false
   });
@@ -292,10 +293,10 @@ router.post("/register", async (request, response) => {
     }
   }).catch(() => exsists = false);
   if (exsists) {
-    return
+    return;
   }
 
-  const id = generateId()
+  const id = generateId();
   const account = {
     "type": "account",
     "pid": id,
@@ -304,7 +305,7 @@ router.post("/register", async (request, response) => {
     email:request.body.email,
     pfp: "https://server.thingmaker.repl.co/pfp.png",
     timestamp:(new Date()).getTime(),
-  }
+  };
   
   db.set("user:"+account.username, account).then(() => {
     const session = {
@@ -329,22 +330,22 @@ router.post("/register", async (request, response) => {
 router.post('/login', async (request, response) => {
   await getPostData(request);
   if (!request.body.username) {
-    return response.status(401).send({success:false, "message": "An `username` is required" });
+    return response.status(401).send({ success: false, message: "A `username` is required" });
   } else if (!request.body.password) {
-    return response.status(401).send({success:false, "message": "A `password` is required" });
+    return response.status(401).send({ success: false, message: "A `password` is required" });
   }
   
   await db.get("user:" + request.body.username)
     .then(async (result) => {
       if (!bcrypt.compareSync(request.body.password, result.password)) {
-        return response.status(500).send({success:false, "message": "Password invalid" })
+        return response.status(500).send({ success: false, message: "Password invalid" });
       }
       const session = {
         "type": "session",
         "id": generateId(),
         "pid": result.pid,
         "username": result.username
-      }
+      };
       await db.set("session:" + session.id, session)
         .then(() => {
           setUser(session.id, response)
@@ -356,14 +357,14 @@ router.post('/login', async (request, response) => {
     }).catch(e => response.status(500).send(e));
 });
 router.get("/account", validate, async (request, response) => {
-  if(!request.username) return response.status(401).send('"Unauthorized"')
+  if(!request.username) return response.status(401).send('"Unauthorized"');
   try {
     await db.get("user:"+request.username)
       .then((result) => response.json(result))
-      .catch((e) => response.status(500).send('"'+e+'"'))
+      .catch((e) => response.status(500).send('"' + e + '"'));
   } catch (e) {
-    console.error(e.message)
-    response.status(500).send('"'+e+'"')
+    console.error(e.message);
+    response.status(500).send('"' + e + '"');
   }
 })
 //delete account
@@ -372,85 +373,85 @@ router.delete("/deleteAccount", validate, async (request, response) => {
     await logout(request, response)
     await db.delete("user:"+request.username)
       .then(() => {
-        response.send("deleted")
-        Log("Deleted user", request.username)
+        response.send("deleted");
+        Log("Deleted user", request.username);
       })
-      .catch((e) => response.status(500).send(e))
+      .catch((e) => response.status(500).send(e));
   } catch (e) {
-    console.error(e.message)
+    console.error(e.message);
   }
 })
 router.get("/logout", async (request, response) => {
-  await logout(request, response)
-  response.send("Your'e logged out")
+  await logout(request, response);
+  response.send("Your'e logged out");
 })
 router.get("/account/*", async (request, response) => {
-  let username = request.url.split("/").pop()
+  let username = request.url.split("/").pop();
   try {
     await db.get("user:"+username)
       .then((result) => response.json(result))
       .catch((e) => response.status(500).send(e))
   } catch (e) {
-    console.error(e.message)
+    console.error(e.message);
   }
 })
 router.post("/changePfp", validate, async(req, res) => {
-  if(!req.username) return res.json({message:"Unauthorized"})
-  await getPostData(req)
-  await db.get("user:"+req.username).then(r => {
+  if(!req.username) return res.json({ message:"Unauthorized" });
+  await getPostData(req);
+  await db.get("user:" + req.username).then(r => {
     if(req.body.pfp) r.pfp = req.body.pfp
     if(req.body.bg) r.bg = req.body.bg
-    db.set("user:"+req.username, r).then(() => {
-      res.json({success:true, pfp:req.body.pfp, bg:req.body.bg})
-    }).catch(e => res.json({message:e}))
-  }).catch(e => res.json({message: e}))
+    db.set("user:" + req.username, r).then(() => {
+      res.json({ success: true, pfp: req.body.pfp, bg: req.body.bg })
+    }).catch(e => res.json({ message: e }))
+  }).catch(e => res.json({ message: e }))
 })
 router.post("/changePwd", validate, async(req, res) => {
-  if(!req.username) return res.json({message:"Unauthorized"})
+  if(!req.username) return res.json({ message: "Unauthorized" })
   await getPostData(req)
-  db.get("user:"+req.username).then(r => {
-    r.password = bcrypt.hashSync(req.body.pwd, 10)
-    db.set("user:"+req.username, r).then(() => {
-      res.json({success:true})
-    }).catch(e => res.json({message:e}))
-  }).catch(e => res.json({message: e}))
-  Log(req.username+" changed their password")
+  db.get("user:" + req.username).then(r => {
+    r.password = bcrypt.hashSync(req.body.pwd, 10);
+    db.set("user:" + req.username, r).then(() => {
+      res.json({ success: true })
+    }).catch(e => res.json({ message: e }))
+  }).catch(e => res.json({ message: e }))
+  Log(req.username + " changed their password")
 })
 router.post("/changeEmail", validate, async(req, res) => {
-  if(!req.username) return res.json({message:"Unauthorized"})
+  if(!req.username) return res.json({ message:"Unauthorized" })
   await getPostData(req)
-  db.get("user:"+req.username).then(r => {
+  db.get("user:" + req.username).then(r => {
     r.email = req.body.email
-    db.set("user:"+req.username, r).then(() => {
-      res.json({success:true})
-    }).catch(e => res.json({message:e}))
-  }).catch(e => res.json({message: e}))
+    db.set("user:" + req.username, r).then(() => {
+      res.json({ success: true })
+    }).catch(e => res.json({ message: e }))
+  }).catch(e => res.json({ message: e }))
   Log(req.username+" changed their email")
 })
 router.post("/changeBio", validate, async(req, res) => {
-  if(!req.username) return res.status(401).json({message:"Unauthorized"})
+  if(!req.username) return res.status(401).json({ message:"Unauthorized" })
   await getPostData(req)
-  db.get("user:"+req.username).then(r => {
-    r.bio = req.body.bio
-    db.set("user:"+req.username, r).then(() => {
-      res.json({success:true})
-      Log(req.username+" changed their bio.")
-    }).catch(e => res.json({message:e}))
-  }).catch(e => res.json({message: e}))
+  db.get("user:" + req.username).then(r => {
+    r.bio = req.body.bio;
+    db.set("user:" + req.username, r).then(() => {
+      res.json({ success:true })
+      Log(req.username + " changed their bio.")
+    }).catch(e => res.json({ message:e }))
+  }).catch(e => res.json({ message: e }))
 })
-router.get("/deleteNotifs", validate, (req,res) => {
-  if(!req.username) return res.status(401).json({message:"Unathorized"})
-  db.get("user:"+req.username).then(r => {
-    delete r.notifs
-    db.set("user:"+req.username, r).then(() => {
-      res.json({success:true})
-      Log(req.username+" deleted their notifications.")
-    }).catch(e => res.json({message:e}))
-  }).catch(e => res.json({message: e}))
+router.get("/deleteNotifs", validate, (req, res) => {
+  if(!req.username) return res.status(401).json({ message: "Unathorized" })
+  db.get("user:" + req.username).then(r => {
+    delete r.notifs;
+    db.set("user:" + req.username, r).then(() => {
+      res.json({ success: true });
+      Log(req.username+" deleted their notifications.");
+    }).catch(e => res.json({ message: e }))
+  }).catch(e => res.json({ message: e }))
 })
-router.get("/pfp/*", async(req,res) => {
-  let username = req.url.split("/").pop()
-  db.get("user:"+username).then(d => {
+router.get("/pfp/*", async(req, res) => {
+  let username = req.url.split("/").pop();
+  db.get("user:" + username).then(d => {
     /*fetch(d.pfp, (err,meta,body) => {
       if(err){
         console.log(err)
@@ -458,40 +459,40 @@ router.get("/pfp/*", async(req,res) => {
       }
       res.send(body)
     })*/
-    res.redirect(d.pfp)
+    res.redirect(d.pfp);
   }).catch(() => res.send("error"))
 })
 router.get("/users", (req, res) => {
-  db.list("user:").then((users) => {res.json(users) })
+  db.list("user:").then((users) => { res.json(users) });
 })
 
-var currentMedia = {
+const currentMedia = {
   type: "",
   data: ""
 }
-router.get("/currentMedia", async(req,res) => {
-  if(currentMedia.data){
-    res.header("Content-Type", currentMedia.type)
-    res.end(currentMedia.data)
-  }else res.send("")
+router.get("/currentMedia", async (req, res) => {
+  if (currentMedia.data) {
+    res.header("Content-Type", currentMedia.type);
+    res.end(currentMedia.data);
+  } else res.send("");
 })
-router.post("/newMedia", async(req,res) => {
-  await getPostText(req)
-  var id = generateId()
+router.post("/newMedia", async (req, res) => {
+  await getPostText(req);
+  const id = generateId();
   /*var buffer = Buffer.from(req.body)
   var prefix = "data:"+req.headers['content-type']+";base64,"
   var url = prefix + buffer.toString("base64").replace(/(\r\n|\n|\r)/gm,"")
   console.log(prefix)*/
-  currentMedia.type = req.headers['content-type']
-  currentMedia.data = Buffer.from(req.body, "base64")
+  currentMedia.type = req.headers['content-type'];
+  currentMedia.data = Buffer.from(req.body, "base64");
 
   cloudinary.uploader.upload("https://server.thingmaker.repl.co/currentMedia", {
     public_id: id,
     resource_type: currentMedia.type.split("/")[0]
   }, function(error, result){
-    if(error){
-      Log(error)
-      return res.json({message: error})
+    if (error){
+      Log(error);
+      return res.json({ message: error });
     }
     res.json({success:true, url: result.secure_url})
     Log("Media id:",id)
@@ -500,13 +501,13 @@ router.post("/newMedia", async(req,res) => {
 // user makes a post/blog
 router.post("/post", validate, async(request, response) => {
   await getPostData(request)
-  if(!request.body.title) {
-    return response.status(401).json({ "message": "A `title` is required" })
-  } else if(!request.body.content) {
-    return response.status(401).json({ "message": "A `content` is required" })
+  if (!request.body.title) {
+    return response.status(401).json({ "message": "A `title` is required" });
+  } else if (!request.body.content) {
+    return response.status(401).json({ "message": "A `content` is required" });
   }
   const uniqueId = generateId()
-  var blog = {
+  let blog = {
     "type": "blog",
     "username": request.username,
     id:uniqueId,
@@ -514,7 +515,7 @@ router.post("/post", validate, async(request, response) => {
     "content": request.body.content,
     "followers":[request.username],
     "timestamp": (new Date()).getTime()
-  }
+  };
   db.set("post:"+uniqueId, blog)
     .then(() => {
       response.json({
@@ -522,35 +523,35 @@ router.post("/post", validate, async(request, response) => {
         data:blog,
         redirect: "/website/post.html?id="+uniqueId
       })
-      Log("New post", blog.title)
+      Log("New post", blog.title);
     })
-    .catch((e) => response.status(500).json({message:e}))
+    .catch((e) => response.status(500).json({ message: e }));
 })
 router.delete("/deletePost/*", validate, async(req, res) => {
-  let id = req.url.split("/").pop()
-  var canDelete = false
-  var adminDelete = false
-  var title
-  var author
-  await db.get("post:"+id).then(async r => {
-    title = r.title
-    author = r.username
-    if(req.username === r.username){
-      canDelete = true
-    }else{
-      await db.get("user:"+req.username).then(u => {
-        if(u.admin){
-          canDelete = true
-          adminDelete = true
+  let id = req.url.split("/").pop();
+  let canDelete = false;
+  let adminDelete = false;
+  let title;
+  let author;
+  await db.get("post:" + id).then(async r => {
+    title = r.title;
+    author = r.username;
+    if (req.username === r.username){
+      canDelete = true;
+    } else {
+      await db.get("user:" + req.username).then(u => {
+        if (u.admin) {
+          canDelete = true;
+          adminDelete = true;
         }
-      }).catch(() => res.send("error"))
+      }).catch(() => res.send("error"));
     }
-  }).catch(() => res.send("error"))
+  }).catch(() => res.send("error"));
 
-  if(!canDelete) return res.status(401).send("Your'e not authorized")
+  if (!canDelete) return res.status(401).send("Your'e not authorized");
   db.delete("post:"+id).then(async() => {
-    if(adminDelete) await notif(req.username+" deleted your post: "+title, author)
-    res.send("ok")
+    if(adminDelete) await notif(req.username+" deleted your post: "+title, author);
+    res.send("ok");
     Log("Deleted post", title)
   }).catch(e => {res.send("error"); console.log(e)})
 })
@@ -563,85 +564,86 @@ router.get("/post/*", (request, res) => {
 })
 //get posts from a user
 router.get("/posts/*", (req, res) => {
-  let username = req.url.split("/").pop()
+  let username = req.url.split("/").pop();
   db.list("post:").then(async matches => {
-    var posts = []
-    for(var i=0; i<matches.length; i++){
+    const posts = [];
+    for (let i = 0; i < matches.length; i++){
       await db.get(matches[i]).then(r => {
-        if(r.username === username){
+        if (r.username === username){
           posts.push({
             username:r.username,
             id:r.id,
             title:r.title,
             timestamp:r.timestamp
-          })
+          });
         }
       })
     }
-    res.json(posts)
-  }).catch(() => res.send(null))
-})
+    res.json(posts);
+  }).catch(() => res.send(null));
+});
 router.get("/posts", (req, res) => {
   db.list("post:").then(async matches => {
-    var posts = []
-    for(var i=0; i<matches.length; i++){
+    let posts = []
+    for (let i = 0; i < matches.length; i++){
       await db.get(matches[i]).then(r => {
         posts.push({
           username:r.username,
           id:r.id,
           title:r.title,
           timestamp:r.timestamp
-        })
-      })
+        });
+      });
     }
     res.json(posts)
-  }).catch(() => res.send(null))
-})
-router.post("/commentPost/*", validate, async(req, res) => {
-  if(!req.username) return res.json({message:"Sign in to comment"})
-  let id = req.url.split("/").pop()
-  await getPostData(req)
-  if(!req.body.comment){
-    return res.json({message:"Comment cannot be blank."})
+  }).catch(() => res.send(null));
+});
+router.post("/commentPost/*", validate, async (req, res) => {
+  if (!req.username) return res.json({ message: "Sign in to comment" });
+  let id = req.url.split("/").pop();
+  await getPostData(req);
+  if (!req.body.comment) {
+    return res.json({ message: "Comment cannot be blank." });
   }
 
   //get post and add comment and replace post
   //first comment on top
-  var pfp
-  await db.get("user:"+req.username).then(r => {
-    pfp = r.pfp
-  }).catch(e => res.json({message:e}))
+  let pfp;
+  await db.get("user:" + req.username).then(r => {
+    pfp = r.pfp;
+  }).catch(e => res.json({ message: e }));
   await db.get("post:"+id).then(async r => {
-    var cid = generateId()
-    r.comments = r.comments || []
-    var commentData = {
+    const cid = generateId();
+    r.comments = r.comments || [];
+    let commentData = {
       username:req.username,
       //pfp:pfp,
       comment:req.body.comment,
       id: cid,
-      timestamp:(new Date()).getTime()
-    }
-    r.comments.push(commentData)
-    if(r.followers){
-      for(var i=0; i<r.followers.length; i++){
-        if(r.followers[i] !== req.username){
-          await db.get("user:"+r.followers[i]).then(async u => {
-            if(!u){
-              var who = r.followers[i]
-              Log(who+" doesn't exsist but is following "+r.title)
-              r.followers.splice(i, 1)
+      //NEVER use (new Date).getTime(); especially in a loop because `new` is slow. use Date.now()
+      timestamp: Date.now()
+    };
+    r.comments.push(commentData);
+    if (r.followers) {
+      for (let i = 0; i < r.followers.length; i++){
+        if (r.followers[i] !== req.username){
+          await db.get("user:" + r.followers[i]).then(async u => {
+            if (!u) {
+              let who = r.followers[i];
+              Log(`${who} doesn't exsist but is following ${r.title}`);
+              r.followers.splice(i, 1);
               i --
-              Log("Removed "+who+" from following "+r.title)
+              Log(`Removed ${who} from following ${r.title}`);
               return
             }
-            u.notifs = u.notifs || []
+            u.notifs = u.notifs || [];
             u.notifs.push({
               notif: req.username+" commented at <a href='/website/post.html?id="+id+"#comment"+cid+"'>"+r.title+"</a>",
               id: generateId(),
               read: false
-            })
-            await db.set("user:"+r.followers[i], u).then(() => {})
-          }).catch(e => Log(e))
+            });
+            await db.set("user:"+r.followers[i], u).then(() => {});
+          }).catch(e => Log(e));
         }
       }
     }
@@ -651,96 +653,96 @@ router.post("/commentPost/*", validate, async(req, res) => {
         type:"comment",
         data:commentData
       }, id, req.body.userId)
-      Log("New comment at", r.title)
-    })
+      Log("New comment at", r.title);
+    });
   }).catch(() => {
     res.json({message:"Post doesn't exsist"})
-  })
-})
-router.post("/deletePostComment/*", validate, async(req,res) => {
-  if(!req.username) return res.status(401).send("error")
-  let id = req.url.split("/").pop()
-  await getPostData(req)
-  db.get("post:"+id).then(async d => {
-    var canDelete, sendNotif
-    let cid = req.body.cid
-    var c
-    for(var i=0; i<d.comments.length; i++){
-      if(d.comments[i].id == cid){
-        c = d.comments[i]
-        break
+  });
+});
+router.post("/deletePostComment/*", validate, async (req, res) => {
+  if (!req.username) return res.status(401).send("error");
+  let id = req.url.split("/").pop();
+  await getPostData(req);
+  db.get("post:" + id).then(async d => {
+    let canDelete, sendNotif;
+    let cid = req.body.cid;
+    let c
+    for (let i = 0; i < d.comments.length; i++){
+      if (d.comments[i].id == cid) {
+        c = d.comments[i];
+        break;
       }
     }
-    if(c.username === req.username){//creator of comment delete the comment
-      canDelete = true
-    }else if(req.username === d.username){//creator of post delete the comment
-      sendNotif = canDelete = true
-    }else{//admin delete comment
-      await db.get("user:"+req.username).then(r => {
-        if(r.admin) sendNotif = canDelete = true
-      })
+    if (c.username === req.username) {//creator of comment delete the comment
+      canDelete = true;
+    } else if (req.username === d.username) {//creator of post delete the comment
+      sendNotif = canDelete = true;
+    } else {//admin delete comment
+      await db.get("user:" + req.username).then(r => {
+        if (r.admin) sendNotif = canDelete = true;
+      });
     }
-    if((!c) || (!canDelete)) return res.send("error")
-    c.hide = true
-    db.set("post:"+id, d).then(async() => {
-      res.send("ok")
-      if(sendNotif) await notif(req.username+" deleted your comment at: "+d.title, c.username)
+    if ((!c) || (!canDelete)) return res.send("error");
+    c.hide = true;
+    db.set("post:" + id, d).then(async () => {
+      res.send("ok");
+      if(sendNotif) await notif(req.username + " deleted your comment at: " + d.title, c.username);
       sendPostWs({
         type:"deleteComment",
         data: cid
-      }, id, req.body.userId)
-      Log("Deleted comment at", d.title)
-    })
-  })
-})
-router.post("/followPost/*", validate, async(req, res) => {
-  if(!req.username) return res.status(401).send("error")
-  let id = req.url.split("/").pop()
-  await getPostData(req)
-  db.get("post:"+id).then(r => {
-    var f = r.followers || (r.followers = [])
-    if(req.body.follow){
-      if(!f.includes(req.username)){
-        f.push(req.username)
+      }, id, req.body.userId);
+      Log("Deleted comment at", d.title);
+    });
+  });
+});
+router.post("/followPost/*", validate, async (req, res) => {
+  if (!req.username) return res.status(401).send("error")
+  let id = req.url.split("/").pop();
+  await getPostData(req);
+  db.get("post:" + id).then(r => {
+    let f = r.followers || (r.followers = []);
+    if (req.body.follow) {
+      if (!f.includes(req.username)) {
+        f.push(req.username);
       }
-    }else{
-      var i = f.indexOf(req.username)
+    } else {
+      const i = f.indexOf(req.username);
       if(i > -1){
-        f.splice(i, 1)
+        f.splice(i, 1);
       }
     }
-    db.set("post:"+id, r).then(() => res.send("ok"))
-  }).catch(() => {res.send("error")})
-})
+    db.set("post:" + id, r).then(() => res.send("ok"));
+  }).catch(() => {res.send("error")});
+});
 router.get("/comments/*", (req, res) => {
-  let id = req.url.split("/").pop()
-  db.get("post:"+id).then(r => {
-    res.json(r.comments || [])
-  }).catch(() => {res.send(null)})
-})
+  let id = req.url.split("/").pop();
+  db.get("post:" + id).then(r => {
+    res.json(r.comments || []);
+  }).catch(() => {res.send(null)});
+});
 router.get("/clearNotifs", validate, (req, res) => {
-  if(!req.username) return res.status(401).send("Unauthorized")
-  db.get("user:"+req.username).then(r => {
-    for(var i=0; i<r.notifs.length; i++){
-      var n = r.notifs[i]
-      n.read = true
+  if (!req.username) return res.status(401).send("Unauthorized");
+  db.get("user:" + req.username).then(r => {
+    for (let i = 0; i < r.notifs.length; i++){
+      const n = r.notifs[i];
+      n.read = true;
     }
-    db.set("user:"+req.username, r).then(() => res.send("cleared")).catch(e => Log(e))
-  }).catch(e => Log(e))
-})
+    db.set("user:" + req.username, r).then(() => res.send("cleared")).catch(e => Log(e));
+  }).catch(e => Log(e));
+});
 
-router.post("/resetPwd", async (req,res) => {
-  return res.json({message:"Functionality not available yet"})
+router.post("/resetPwd", async (req, res) => {
+  return res.json({ message: "Functionality not available yet" })
 
-  await getPostData(req)
-  var username = req.body.username
-  db.get("user:"+username).then(r => {
-    if(!r) return res.json({message:"That account doesn;t exsist."})
-    var email = r.email || ""
-    if(!email){
-      return res.json({message:"Sorry, that account doesn't have an email."})
+  await getPostData(req);
+  const username = req.body.username;
+  db.get("user:" + username).then(r => {
+    if (!r) return res.json({ message: "That account doesn;t exsist." });
+    let email = r.email || "";
+    if (!email) {
+      return res.json({ message: "Sorry, that account doesn't have an email." })
     }
-    var transport = nodemailer.createTransport({
+    let transport = nodemailer.createTransport({
       host: "smtp.gmail.com",
       port: 2525,
       auth: {
@@ -748,7 +750,7 @@ router.post("/resetPwd", async (req,res) => {
         pass: process.env['gmail_pass']
       }
     });
-    var message = {
+    let message = {
       from: "reset_password@thingmaker.repl.co",
       to: email,
       subject: "Reset Password",
@@ -759,70 +761,70 @@ router.post("/resetPwd", async (req,res) => {
   <li>Click <a>here</a></li>
 </ol>
 `
-    }
-    transport.sendMail(message, function(err, info) {
+    };
+    transport.sendMail(message, function (err, info) {
       if (err) {
-        res.json({message:JSON.stringify(err)})
+        res.json({ message: JSON.stringify(err) })
       } else {
-        Log("Reset password email sent to "+req.username,info);
-        res.json({success:true})
+        Log("Reset password email sent to " + req.username,info);
+        res.json({ success: true });
       }
-    })
-  })
-})
+    });
+  });
+});
 
 router.get("/sessions", (req, res) => {
-  const pwd = process.env['pwd']
-  var urlData = url.parse(req.url,true)
-  var q = urlData.query.pwd
-  if(q === pwd){
-    db.list("session:").then((d) => {res.json(d) })
-  }else{
-    res.sendFile(__dirname+"/401.html")
+  const pwd = process.env['pwd'];
+  let urlData = url.parse(req.url, true);
+  let q = urlData.query.pwd
+  if (q === pwd) {
+    db.list("session:").then((d) => {res.json(d)})
+  } else {
+    res.sendFile(__dirname + "/401.html");
   }
 })
 
 //for minekhan
 router.get("/worlds", (req, res) => {
-  var data = []
-  for(var i=0; i<worlds.length; i++){
-    var w = worlds[i]
+  let data = []
+  for (let i = 0; i < worlds.length; i++){
+    let w = worlds[i];
     data.push({
       name: w.name,
       players: (() => {
-        var ps = []
-        w.players.forEach(r => ps.push(r.username))
-        return ps
+        let ps = [];
+        w.players.forEach(r => ps.push(r.username));
+        return ps;
       })(),
       id: w.id,
       host: w.host.username
     })
   }
-  res.json(data)
+  res.json(data);
 })
 router.get("/worldsPing", (req, res) => {
-  var w = []
-  for(var i=0; i<worlds.length; i++){
-    var world = worlds[i]
-    w.push(pingWorld(world.id))
+  let w = [];
+  for(var i = 0; i < worlds.length; i++){
+    let world = worlds[i];
+    w.push(pingWorld(world.id));
   }
   Promise.all(w).then(w => {
-    var data = {}
-    for(var i=0; i<w.length; i++){
-      data[worlds[i].id] = w[i]
+    let data = {}
+    for(let i = 0; i < w.length; i++){
+      data[worlds[i].id] = w[i];
     }
-    res.json(data)
+    res.json(data);
   })
 })
 
-router.post("/admin/messageUser/*", validate, async(req,res) => {
-  if(!await isAdmin(req.username)) return res.json({message:"Unauthorized"})
-  await getPostData(req)
-  let to = req.url.split("/").pop()
-  await notif(req.body.message, to)
-  res.json({success:true})
+router.post("/admin/messageUser/*", validate, async (req,res) => {
+  if (!await isAdmin(req.username)) return res.json({ message:"Unauthorized" })
+  await getPostData(req);
+  let to = req.url.split("/").pop();
+  await notif(req.body.message, to);
+  res.json({ success: true });
 })
-app.use(router)
+app.use(router);
 
 //404
 app.use(function(req, res, next) {
