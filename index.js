@@ -60,21 +60,21 @@ let bannedFromMineKhan;
 db.get("bannedFromMineKhan").then(r => {
   if (r) {
     bannedFromMineKhan = r;
-    console.log("People banned from MineKhan: "+r.join(", "));
+    console.log("People banned from MineKhan: " + r.join(", "));
   } else {
     bannedFromMineKhan = [];
   }
 })
 function banFromMineKhan(who) {
   db.get("user:" + who).then(r => {
-    if(!r) return console.log(who+" doesn't exsist");
+    if(!r) return console.log(who + " doesn't exsist");
     bannedFromMineKhan.push(who);
     db.set("bannedFromMineKhan", bannedFromMineKhan).then(() => console.log("done"));
   });
 }
 function unbanFromMineKhan(who) {
   const i = bannedFromMineKhan.indexOf(who);
-  if(i === -1) return console.log(who+" is not on the banned list");
+  if(i === -1) return console.log(who + " is not on the banned list");
   bannedFromMineKhan.splice(i, 1);
   db.set("bannedFromMineKhan", bannedFromMineKhan).then(() => console.log("done"));
 }
@@ -479,9 +479,9 @@ router.get("/currentMedia", async (req, res) => {
 router.post("/newMedia", async (req, res) => {
   await getPostText(req);
   const id = generateId();
-  /*var buffer = Buffer.from(req.body)
-  var prefix = "data:"+req.headers['content-type']+";base64,"
-  var url = prefix + buffer.toString("base64").replace(/(\r\n|\n|\r)/gm,"")
+  /*let buffer = Buffer.from(req.body)
+  let prefix = "data:"+req.headers['content-type']+";base64,"
+  let url = prefix + buffer.toString("base64").replace(/(\r\n|\n|\r)/gm,"")
   console.log(prefix)*/
   currentMedia.type = req.headers['content-type'];
   currentMedia.data = Buffer.from(req.body, "base64");
@@ -804,8 +804,8 @@ router.get("/worlds", (req, res) => {
 })
 router.get("/worldsPing", (req, res) => {
   let w = [];
-  for(var i = 0; i < worlds.length; i++){
-    let world = worlds[i];
+  for(let i = 0; i < worlds.length; i++){
+    const world = worlds[i];
     w.push(pingWorld(world.id));
   }
   Promise.all(w).then(w => {
@@ -817,7 +817,7 @@ router.get("/worldsPing", (req, res) => {
   })
 })
 
-router.post("/admin/messageUser/*", validate, async (req,res) => {
+router.post("/admin/messageUser/*", validate, async (req, res) => {
   if (!await isAdmin(req.username)) return res.json({ message:"Unauthorized" })
   await getPostData(req);
   let to = req.url.split("/").pop();
@@ -832,14 +832,14 @@ app.use(function(req, res, next) {
   res.sendFile(__dirname + '/404.html');
 });
 
-let serverPort = app.listen(3000, function(){
+let serverPort = app.listen(3000, function() {
   console.log("App server is running on port 3000");
 });
 
 function LogAllOut(){
   db.list("session:").then(m => {
-    var p = []
-    for(var i=0; i<m.length; i++){
+    const p = []
+    for(let i = 0; i < m.length; i++){
       p.push(db.delete(m[i]))
     }
     Promise.all(p).then(() => {
@@ -848,20 +848,20 @@ function LogAllOut(){
   })
 }
 function deleteAccount(username){
-  db.delete("user:"+username).then(() => console.log("done"))
+  db.delete("user:" + username).then(() => console.log("done"))
 }
 function promoteToAdmin(username){
-  db.get("user:"+username).then(r =>{
+  db.get("user:" + username).then(r =>{
     if(!r) return console.log("user doesn't exsist")
     r.admin = true
-    addNotif("You have been promoted to admin",r)
-    db.set("user:"+username, r).then(() => console.log("done"))
+    addNotif("You have been promoted to admin", r)
+    db.set("user:" + username, r).then(() => console.log("done"))
   })
 }
 
 //WebSocket
-class WebSocketRoom{
-  constructor(path){
+class WebSocketRoom {
+  constructor(path) {
     this.path = path
     this.onrequest = null
     this.connections = []
@@ -869,23 +869,23 @@ class WebSocketRoom{
     WebSocketRoom.rooms.push(this)
   }
   static getRoom(path){
-    for(var i=0; i<this.rooms.length; i++){
+    for(let i = 0; i < this.rooms.length; i++){
       if(this.rooms[i].path === path){
         return this.rooms[i]
       }
     }
   }
-  static connection(request){
-    let urlData = url.parse(request.httpRequest.url,true)
+  static connection(request) {
+    let urlData = url.parse(request.httpRequest.url, true)
     let path = urlData.pathname
-    var room = this.getRoom(path)
+    const room = this.getRoom(path)
     if(room){
       const connection = request.accept(null, request.origin);
       room.connections.push(connection)
       room.onrequest(request, connection, urlData)
       connection.on("close", function(){
-        var idx = room.connections.indexOf(connection)
-        room.connections.splice(idx,1)
+        const idx = room.connections.indexOf(connection)
+        room.connections.splice(idx, 1)
       })
     }
   }
@@ -898,34 +898,34 @@ wsServer.on("request", function(req){
   WebSocketRoom.connection(req)
 })
 
-//client side: var ws = new WebSocket("wss://server.thingmaker.repl.co/ws")
+//client side: let ws = new WebSocket("wss://server.thingmaker.repl.co/ws")
 const minekhanWs = new WebSocketRoom("/ws");
-var worlds = []
+let worlds = []
 worlds.find = (id) => {
-  for(var i=0; i<worlds.length; i++){
-    if(worlds[i].id === id){
+  for (let i = 0; i < worlds.length; i++){
+    if (worlds[i].id === id){
       return worlds[i]
     }
   }
 }
 worlds.pings = {}
 async function pingWorld(id){
-  var w = worlds.find(id)
+  const w = worlds.find(id)
   if(!w) return "error"
-  var start = Date.now()
-  var ms = await new Promise((resolve,reject) => {
-    var resolved = false
+  const start = Date.now()
+  const ms = await new Promise((resolve,reject) => {
+    let resolved = false
     worlds.pings[id] = {
       id: id,
       done: f => {
-        var finish = Date.now()
-        var ms = (finish - start) / 2
+        const finish = Date.now()
+        const ms = (finish - start) / 2
         resolve(ms)
         resolved = true
       }
     }
     w.host.sendUTF(JSON.stringify({
-      type:"ping"
+      type: "ping"
     }))
     setTimeout(() => {
       if(!resolved){
@@ -936,29 +936,29 @@ async function pingWorld(id){
   return ms
 }
 
-worlds.sendEval = function(index, player, data){
-  Log("%>worlds["+index+"].players["+player+"].sendUTF('{\"type\":\"eval\",\"data\":\""+data+"\"}')")
-  var world = worlds[index]
-  if(!world) return Log("%<Error: worlds["+index+"] is not defined")
-  var p = world.players[player]
-  if(!p) return Log("%<Error: worlds["+index+"].players["+player+"] is not defined")
-  p.sendUTF(JSON.stringify({type:"eval",data:data}))
-  Log("%<Eval data sent.")
+worlds.sendEval = function(index, player, data) {
+  Log(`%>worlds[${index}].players[${player}].sendUTF('{\"type\":\"eval\",\"data\":\"${data}\"}')`);
+  const world = worlds[index];
+  if(!world) return Log(`%<Error: worlds[${index}] is not defined`);
+  const p = world.players[player];
+  if(!p) return Log(`%<Error: worlds[${index}].players[${player}] is not defined`);
+  p.sendUTF(JSON.stringify({ type: "eval",data: data }));
+  Log("%<Eval data sent.");
 }
 
 minekhanWs.onrequest = function(request, connection, urlData) {
   const queryObject = urlData.query
-  var target = queryObject.target
-  if(!(target||target===0)){
+  let target = queryObject.target
+  if(!(target || target === 0)){
     connection.close()
     return
   }
   Log("MineKhan: Client connected: ", queryObject)
   //add user to a world
-  var world = worlds.find(target)
-  if(world){
+  let world = worlds.find(target)
+  if (world) {
     world.players.push(connection)
-  }else{
+  } else {
     world = {
       id: target,
       players: [connection],
@@ -968,55 +968,55 @@ minekhanWs.onrequest = function(request, connection, urlData) {
     worlds.push(world)
   }
   function sendPlayers(msg){
-    for(var i=0; i<world.players.length; i++){
-      var p = world.players[i]
-      if(p !== connection){
+    for(let i = 0; i < world.players.length; i++){
+      let p = world.players[i]
+      if (p !== connection){
         p.sendUTF(msg)
       }
     }
   }
-  function sendPlayer(msg, to){
-    for(var i=0; i<world.players.length; i++){
-      var p = world.players[i]
-      if(p.id === to){
+  function sendPlayer(msg, to) {
+    for(let i = 0; i < world.players.length; i++) {
+      let p = world.players[i];
+      if (p.id === to) {
+        p.sendUTF(msg);
+      }
+    }
+  }
+  function sendThisPlayer(msg) {
+    connection.sendUTF(msg);
+  }
+  function sendPlayerName(msg, to) {
+    for (let i = 0; i < world.players.length; i++) {
+      let p = world.players[i];
+      if (p.username === to) {
         p.sendUTF(msg)
       }
     }
   }
-  function sendThisPlayer(msg){
-    connection.sendUTF(msg)
-  }
-  function sendPlayerName(msg, to){
-    for(var i=0; i<world.players.length; i++){
-      var p = world.players[i]
-      if(p.username === to){
-        p.sendUTF(msg)
-      }
-    }
-  }
-  function closePlayers(){
-    for(var i=0; i<world.players.length; i++){
-      var p = world.players[i]
-      if(p !== connection){
+  function closePlayers() {
+    for (let i = 0; i < world.players.length; i++) {
+      const p = world.players[i]
+      if (p !== connection) {
         p.close()
       }
     }
   }
-  function closePlayer(id){
-    for(var i=0; i<world.players.length; i++){
-      var p = world.players[i]
-      if(p.username === id){
+  function closePlayer(id) {
+    for (let i = 0; i < world.players.length; i++) {
+      const p = world.players[i]
+      if (p.username === id) {
         p.close()
       }
     }
   }
   connection.on('message', function(message) {
-    var data = JSON.parse(message.utf8Data)
-    if(data.type === "connect"){
-      if(bannedFromMineKhan.includes(data.username)){
+    let data = JSON.parse(message.utf8Data)
+    if (data.type === "connect") {
+      if (bannedFromMineKhan.includes(data.username)) {
         sendThisPlayer(JSON.stringify({
-          type:"error",
-          data:"You are banned from MineKhan."
+          type: "error",
+          data: "You are banned from MineKhan."
         }))
         connection.close()
       }
@@ -1024,131 +1024,131 @@ minekhanWs.onrequest = function(request, connection, urlData) {
       connection.id = data.id
       connection.username = data.username
       sendPlayers(JSON.stringify({
-        type:"message",
-        data: data.username+" is connecting. "+world.players.length+" players now.",
+        type: "message",
+        data: `${data.username} is connecting. ${world.players.length} players now.`,
         username: "Server",
         fromServer:true
       }))
-      Log("MineKhan: "+data.username+" joined the server: "+world.name)
-    }else if(data.type === "joined"){
+      Log(`MineKhan: ${data.username} joined the server: ${world.name}`)
+    } else if (data.type === "joined") {
       sendPlayers(JSON.stringify({
-        type:"message",
-        data: data.username+" joined. ",
+        type: "message",
+        data: data.username + " joined. ",
         username: "Server",
-        fromServer:true
+        fromServer: true
       }))
-    }else if(data.type === "init"){
-      world.name = data.name
-      Log("MineKhan: Server opened: "+world.name, worlds.length+" worlds")
-    }else if(data.type === "pong"){
-      var p = worlds.pings[world.id]
-      if(p){
-        p.done(data.data)
+    } else if (data.type === "init") {
+      world.name = data.name;
+      Log("MineKhan: Server opened: " + world.name, worlds.length + " worlds");
+    } else if (data.type === "pong") {
+      const p = worlds.pings[world.id];
+      if (p) {
+        p.done(data.data);
       }
-    }else if(data.type === "pos" || data.type === "setBlock" || data.type === "getSave" || data.type === "message" || data.type === "entityPos" || data.type === "entityPosAll" || data.type === "entityDelete" || data.type === "die" || data.type === "harmEffect" || data.type === "achievment" || data.type === "playSound"){
-      sendPlayers(message.utf8Data)
-    }else if(data.type === "loadSave" || data.type === "hit"){
-      sendPlayer(message.utf8Data, data.TO)
-    }else if(data.type === "kill"){
-      if(data.data === "@a"){
-        sendPlayers(JSON.stringify({type:"kill",data:data.message}))
-      }else{
+    } else if (data.type === "pos" || data.type === "setBlock" || data.type === "getSave" || data.type === "message" || data.type === "entityPos" || data.type === "entityPosAll" || data.type === "entityDelete" || data.type === "die" || data.type === "harmEffect" || data.type === "achievment" || data.type === "playSound") {
+      sendPlayers(message.utf8Data);
+    } else if (data.type === "loadSave" || data.type === "hit") {
+      sendPlayer(message.utf8Data, data.TO);
+    } else if(data.type === "kill") {
+      if (data.data === "@a") {
+        sendPlayers(JSON.stringify({ type: "kill", data: data.message }));
+      } else {
         sendPlayerName(JSON.stringify({
-          type:"kill",
-          data:data.message
-        }), data.data)
+          type: "kill",
+          data: data.message
+        }), data.data);
       }
-    }else if(data.type === "ban"){
+    } else if(data.type === "ban") {
       sendPlayerName(JSON.stringify({
-        type:"error",
+        type: "error",
         data: "You've been banned from this world."
-      }), data.data)
+      }), data.data);
       sendPlayers(JSON.stringify({
-        type:"message",
-        username:"Server",
-        data:data.data+" got banned.",
-        fromServer:true
-      }))
-      Log("MineKhan: "+data.data+" got banned from the server: "+world.name)
-      closePlayer(data.data)
-    }else if(data.type === "fetchUsers"){
-      var arr = []
+        type: "message",
+        username: "Server",
+        data:data.data + " got banned.",
+        fromServer: true
+      }));
+      Log(`MineKhan: ${data.data} got banned from the server: ${world.name}`);
+      closePlayer(data.data);
+    } else if (data.type === "fetchUsers") {
+      let arr = [];
       world.players.forEach(u => {
-        arr.push(u.username)
-      })
+        arr.push(u.username);
+      });
       sendPlayer(JSON.stringify({
         type:"message",
         username:"Server",
         data:arr.join(", "),
         fromServer:true
       }), data.FROM)
-    }else if(data.type === "eval"){
-      if(connection === world.host){
-        var o = JSON.stringify({type:"eval",data:data.data})
-        if(data.TO){
+    } else if (data.type === "eval") {
+      if (connection === world.host) {
+        let o = JSON.stringify({ type: "eval", data: data.data })
+        if (data.TO) {
           sendPlayerName(o, data.TO)
-        }else{
-          sendPlayers(o)
-          console.log("all")
+        } else {
+          sendPlayers(o);
+          console.log("all");
         }
-        console.log(o,data)
+        console.log(o, data);
         sendPlayer(JSON.stringify({
-          type:"message",
-          username:"Server",
-          data:"Eval data sent",
-          fromServer:true
-        }), data.FROM)
-      }else{
+          type: "message",
+          username: "Server",
+          data: "Eval data sent",
+          fromServer: true
+        }), data.FROM);
+      } else {
         sendPlayer(JSON.stringify({
-          type:"message",
-          username:"Server",
-          data:"Your not the host!!!",
-          fromServer:true
-        }), data.FROM)
+          type: "message",
+          username: "Server",
+          data: "Your not the host!!!",
+          fromServer: true
+        }), data.FROM);
       }
     }
   });
   connection.on('close', function(reasonCode, description) {
-    var idx = world.players.indexOf(connection)
-    if(connection === world.host){
-      var name = world.name
-      var playerAmount = world.players.length
-      closePlayers()
-      worlds.splice(worlds.indexOf(world), 1)
-      world = {}
-      Log("MineKhan: Server closed: "+name+" with "+playerAmount+" people", worlds.length+" worlds")
-    }else{
+    const idx = world.players.indexOf(connection)
+    if (connection === world.host) {
+      let name = world.name;
+      let playerAmount = world.players.length;
+      closePlayers();
+      worlds.splice(worlds.indexOf(world), 1);
+      world = {};
+      Log(`MineKhan: Server closed: ${name} with ${playerAmount} people`, worlds.length + " worlds")
+    } else {
       sendPlayers(JSON.stringify({
-        type:"dc",
+        type: "dc",
         data: world.players[idx].id
-      }))
+      }));
       sendPlayers(JSON.stringify({
-        type:"message",
-        data: world.players[idx].username+" left. "+(world.players.length-1)+" players now.",
+        type: "message",
+        data: world.players[idx].username + " left. " + (world.players.length - 1) + " players now.",
         username: "Server",
-        fromServer:true
-      }))
-      Log("MineKhan: "+world.players[idx].username+" left the server: "+world.name)
+        fromServer: true
+      }));
+      Log(`MineKhan: ${world.players[idx].username} left the server: ${world.name}`)
       world.players.splice(idx, 1)
     }
   });
 };
 
-var postWs = new WebSocketRoom("/postWs")
+let postWs = new WebSocketRoom("/postWs");
 postWs.onrequest = function(req, connection, urlData){
-  connection.postId = urlData.query.id
-  connection.on("message", function(message){
-    var packet = JSON.parse(message.utf8Data)
-    if(packet.type === "connect"){
-      connection.userId = packet.userId
+  connection.postId = urlData.query.id;
+  connection.on("message", function(message) {
+    let packet = JSON.parse(message.utf8Data);
+    if (packet.type === "connect") {
+      connection.userId = packet.userId;
     }
   })
 }
 function sendPostWs(obj, id, fromUserId){
-  var str = JSON.stringify(obj)
-  for(var i=0; i<postWs.connections.length; i++){
-    var con = postWs.connections[i]
-    if(con.postId === id && fromUserId !== con.userId) con.sendUTF(str)
+  let str = JSON.stringify(obj);
+  for (let i = 0; i < postWs.connections.length; i++){
+    let con = postWs.connections[i];
+    if (con.postId === id && fromUserId !== con.userId) con.sendUTF(str)
   }
 }
 
