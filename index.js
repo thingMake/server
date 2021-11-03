@@ -304,9 +304,8 @@ router.post("/register", async (request, response) => {
     "password": bcrypt.hashSync(request.body.password, 10),
     email:request.body.email,
     pfp: "https://server.thingmaker.repl.co/pfp.png",
-    timestamp:(new Date()).getTime(),
-  };
-  
+    timestamp: Date.now(),
+  };  
   db.set("user:"+account.username, account).then(() => {
     const session = {
         "type": "session",
@@ -513,15 +512,15 @@ router.post("/post", validate, async(request, response) => {
     id:uniqueId,
     "title": request.body.title,
     "content": request.body.content,
-    "followers":[request.username],
-    "timestamp": (new Date()).getTime()
+    "followers": [request.username],
+    "timestamp": Date.now()
   };
-  db.set("post:"+uniqueId, blog)
+  db.set("post:" + uniqueId, blog)
     .then(() => {
       response.json({
-        success:true,
-        data:blog,
-        redirect: "/website/post.html?id="+uniqueId
+        success: true,
+        data: blog,
+        redirect: "/website/post.html?id=" + uniqueId
       })
       Log("New post", blog.title);
     })
@@ -548,9 +547,9 @@ router.delete("/deletePost/*", validate, async(req, res) => {
     }
   }).catch(() => res.send("error"));
 
-  if (!canDelete) return res.status(401).send("Your'e not authorized");
-  db.delete("post:"+id).then(async() => {
-    if(adminDelete) await notif(req.username+" deleted your post: "+title, author);
+  if (!canDelete) return res.status(401).send("You're not authorized");
+  db.delete("post:" + id).then(async() => {
+    if (adminDelete) await notif(req.username + " deleted your post: " + title, author);
     res.send("ok");
     Log("Deleted post", title)
   }).catch(e => {res.send("error"); console.log(e)})
@@ -558,7 +557,7 @@ router.delete("/deletePost/*", validate, async(req, res) => {
 //get a post by its id
 router.get("/post/*", (request, res) => {
   let id = request.url.split("/").pop()
-  db.get("post:"+id).then(data => {
+  db.get("post:" + id).then(data => {
     res.json(data)
   }).catch(() => res.send(null))
 })
@@ -620,43 +619,42 @@ router.post("/commentPost/*", validate, async (req, res) => {
       //pfp:pfp,
       comment:req.body.comment,
       id: cid,
-      //NEVER use (new Date).getTime(); especially in a loop because `new` is slow. use Date.now()
-      timestamp: Date.now()
-    };
-    r.comments.push(commentData);
+      timestamp:Date.now()
+    }
+    r.comments.push(commentData)
     if (r.followers) {
-      for (let i = 0; i < r.followers.length; i++){
-        if (r.followers[i] !== req.username){
+      for (let i = 0; i < r.followers.length; i++) {
+        if (r.followers[i] !== req.username) {
           await db.get("user:" + r.followers[i]).then(async u => {
             if (!u) {
-              let who = r.followers[i];
-              Log(`${who} doesn't exsist but is following ${r.title}`);
-              r.followers.splice(i, 1);
+              const who = r.followers[i];
+              Log(`${who} doesn't exsist but is following ${r.title}`)
+              r.followers.splice(i, 1)
               i --
               Log(`Removed ${who} from following ${r.title}`);
               return
             }
             u.notifs = u.notifs || [];
             u.notifs.push({
-              notif: req.username+" commented at <a href='/website/post.html?id="+id+"#comment"+cid+"'>"+r.title+"</a>",
+              notif: `req.username+" commented at <a href='/website/post.html?id="+id#comment${cid}">${r.title}</a>`,
               id: generateId(),
               read: false
             });
-            await db.set("user:"+r.followers[i], u).then(() => {});
+            await db.set("user:" + r.followers[i], u).then(() => {});
           }).catch(e => Log(e));
         }
       }
     }
-    db.set("post:"+id, r).then(() => {
-      res.json({success:true, id:cid})
+    db.set("post:" + id, r).then(() => {
+      res.json({success: true, id: cid})
       sendPostWs({
-        type:"comment",
-        data:commentData
+        type: "comment",
+        data: commentData
       }, id, req.body.userId)
       Log("New comment at", r.title);
     });
   }).catch(() => {
-    res.json({message:"Post doesn't exsist"})
+    res.json({message: "Post doesn't exsist"})
   });
 });
 router.post("/deletePostComment/*", validate, async (req, res) => {
@@ -668,7 +666,7 @@ router.post("/deletePostComment/*", validate, async (req, res) => {
     let cid = req.body.cid;
     let c
     for (let i = 0; i < d.comments.length; i++){
-      if (d.comments[i].id == cid) {
+      if (d.comments[i].id === cid) {
         c = d.comments[i];
         break;
       }
