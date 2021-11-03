@@ -213,7 +213,7 @@ function logout(request, res){
 async function validate(request, response, next) => {
   const sid = request.cookies ? request.cookies.sid : null;
   if (sid) {
-    await db.get("session:"+sid);
+    await db.get("session:" + sid);
       .then(async(result) => {
         request.username = result.username;
         next();
@@ -225,20 +225,20 @@ async function validate(request, response, next) => {
 }
 async function isAdmin(username){
   let admin;
-  await db.get("user:"+username).then(r => {
+  await db.get("user:" + username).then(r => {
     admin = r.admin;
   }).catch(e => Log(e));
   return admin;
 }
 async function notif(data, username){
-  await db.get("user:"+username).then(async u => {
+  await db.get("user:" + username).then(async u => {
     u.notifs = u.notifs || [];
     u.notifs.push({
       notif:data,
       id: generateId(),
       read: false
     });
-    await db.set("user:"+username, u).then(() => {});
+    await db.set("user:" + username, u).then(() => {});
   }).catch(e => Log(e));
 }
 function addNotif(data, u){
@@ -279,7 +279,7 @@ router.post("/register", async (request, response) => {
   }
 
   if (request.body.username.match(/[^a-zA-Z0-9\-_]/)) {
-    return response.json({message:"Username can only contain characters: A-Z, a-z, 0-9, - and _"});
+    return response.json({ message: "Username can only contain characters: A-Z, a-z, 0-9, - and _" });
   }
 
   let exsists = false
@@ -433,7 +433,7 @@ router.post("/changeBio", validate, async(req, res) => {
   db.get("user:" + req.username).then(r => {
     r.bio = req.body.bio;
     db.set("user:" + req.username, r).then(() => {
-      res.json({ success:true })
+      res.json({ success: true })
       Log(req.username + " changed their bio.")
     }).catch(e => res.json({ message:e }))
   }).catch(e => res.json({ message: e }))
@@ -493,7 +493,7 @@ router.post("/newMedia", async (req, res) => {
       Log(error);
       return res.json({ message: error });
     }
-    res.json({success:true, url: result.secure_url})
+    res.json({ success: true, url: result.secure_url })
     Log("Media id:",id)
   })
 })
