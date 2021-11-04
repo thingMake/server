@@ -88,8 +88,7 @@ function generateId() {
 function generateId() {
   //genid ++
   //return genid
-  // not sure if this works if two ids are generated at the same time so I'll change it
-  return (Date.now() | performance.now()) & Math.random();
+  return Date.now();
 }
 
 function valueToString(v, nf) { //for log
