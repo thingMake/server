@@ -438,8 +438,8 @@ router.post("/changeBio", validate, async(req, res) => {
 })
 router.post("/changeSkin", validate, async(req, res) => {
   if(!req.username) return res.status(401).json({message:"Unauthorized"})
-  if(req.body.skin) return res.json({message:"Please set a skin"})
   await getPostData(req)
+  if(!req.body.skin) return res.json({message:"Please set a skin"})
   db.get("user:"+req.username).then(r => {
     r.skin = req.body.skin
     db.set("user:"+req.username, r).then(() => {
