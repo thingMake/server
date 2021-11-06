@@ -436,6 +436,19 @@ router.post("/changeBio", validate, async(req, res) => {
     }).catch(e => res.json({message:e}))
   }).catch(e => res.json({message: e}))
 })
+router.post("/changeSkin", validate, async(req, res) => {
+  if(!req.username) return res.status(401).json({message:"Unauthorized"})
+  if(req.body.skin) return res.json({message:"Please set a skin"})
+  await getPostData(req)
+  db.get("user:"+req.username).then(r => {
+    r.skin = req.body.skin
+    db.set("user:"+req.username, r).then(() => {
+      res.json({success:true})
+      Log(req.username+" changed their skin.")
+    }).catch(e => res.json({message:e}))
+  }).catch(e => res.json({message: e}))
+})
+
 router.get("/deleteNotifs", validate, (req,res) => {
   if(!req.username) return res.status(401).json({message:"Unathorized"})
   db.get("user:"+req.username).then(r => {
@@ -1043,7 +1056,7 @@ minekhanWs.onrequest = function(request, connection, urlData) {
       }
     }else if(data.type === "pos" || data.type === "setBlock" || data.type === "getSave" || data.type === "message" || data.type === "entityPos" || data.type === "entityPosAll" || data.type === "entityDelete" || data.type === "die" || data.type === "harmEffect" || data.type === "achievment" || data.type === "playSound"){
       sendPlayers(message.utf8Data)
-    }else if(data.type === "loadSave" || data.type === "hit"){
+    }else if(data.type === "loadSave" || data.type === "hit" || data.type === "mySkin"){
       sendPlayer(message.utf8Data, data.TO)
     }else if(data.type === "kill"){
       if(data.data === "@a"){
@@ -1057,7 +1070,7 @@ minekhanWs.onrequest = function(request, connection, urlData) {
     }else if(data.type === "ban"){
       sendPlayerName(JSON.stringify({
         type:"error",
-        data: "You've been banned from this world."
+        data: data.reason ? "You've been banned from this world.\n\nReason:\n"+data.reason : "You've been banned from this world."
       }), data.data)
       sendPlayers(JSON.stringify({
         type:"message",
