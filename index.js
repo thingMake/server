@@ -155,7 +155,7 @@ router.get("/pfp.png", (req,res) => {
   res.sendFile(__dirname+"/pfp.png");
 })
 router.get("/panorama", (req,res) => {
-  res.redirect("https://data.thingmaker.repl.co/images/panorama/halloween.png");
+  res.redirect("https://data.thingmaker.repl.co/images/panorama/desert_house.png")
 })
 
 function getPostData(req){
@@ -416,36 +416,50 @@ router.post("/changePwd", validate, async(req, res) => {
   Log(req.username + " changed their password")
 })
 router.post("/changeEmail", validate, async(req, res) => {
-  if(!req.username) return res.json({ message:"Unauthorized" })
-  await getPostData(req)
+  if(!req.username) return res.json({ message:"Unauthorized" });
+  await getPostData(req);
   db.get("user:" + req.username).then(r => {
-    r.email = req.body.email
+    r.email = req.body.email;
     db.set("user:" + req.username, r).then(() => {
-      res.json({ success: true })
-    }).catch(e => res.json({ message: e }))
-  }).catch(e => res.json({ message: e }))
-  Log(req.username+" changed their email")
-})
-router.post("/changeBio", validate, async(req, res) => {
-  if(!req.username) return res.status(401).json({ message:"Unauthorized" })
-  await getPostData(req)
+      res.json({ success: true });
+    }).catch(e => res.json({ message: e }));
+  }).catch(e => res.json({ message: e }));
+  Log(req.username+" changed their email");
+});
+router.post("/changeBio", validate, async (req, res) => {
+  if (!req.username) return res.status(401).json({ message: "Unauthorized" });
+  await getPostData(req);
   db.get("user:" + req.username).then(r => {
     r.bio = req.body.bio;
     db.set("user:" + req.username, r).then(() => {
-      res.json({ success: true })
-      Log(req.username + " changed their bio.")
-    }).catch(e => res.json({ message:e }))
-  }).catch(e => res.json({ message: e }))
+      res.json({ success: true });
+      Log(req.username + " changed their bio.");
+    }).catch(e => res.json({ message: e }));
+  }).catch(e => res.json({ message: e }));
 })
-router.get("/deleteNotifs", validate, (req, res) => {
-  if(!req.username) return res.status(401).json({ message: "Unathorized" })
+
+router.post("/changeSkin", validate, async (req, res) => {
+  if (!req.username) return res.status(401).json({ message: "Unauthorized" })
+  await getPostData(req);
+  if (!req.body.skin) return res.json({ message: "Please set a skin" });
+  db.get("user:" + req.username).then(r => {
+    r.skin = req.body.skin;
+    db.set("user:" + req.username, r).then(() => {
+      res.json({ success: true });
+      Log(req.username + " changed their skin.");
+    }).catch(e => res.json({ message: e }));
+  }).catch(e => res.json({ message: e }));
+});
+
+router.get("/deleteNotifs", validate, (req,res) => {
+  if (!req.username) return res.status(401).json({ message: "Unathorized" });
   db.get("user:" + req.username).then(r => {
     delete r.notifs;
     db.set("user:" + req.username, r).then(() => {
       res.json({ success: true });
-      Log(req.username+" deleted their notifications.");
-    }).catch(e => res.json({ message: e }))
-  }).catch(e => res.json({ message: e }))
+      Log(req.username + " deleted their notifications.");
+    }).catch(e => res.json({ message: e }));
+  }).catch(e => res.json({ message: e }));
 })
 router.get("/pfp/*", async(req, res) => {
   let username = req.url.split("/").pop();
@@ -460,14 +474,26 @@ router.get("/pfp/*", async(req, res) => {
     res.redirect(d.pfp);
   }).catch(() => res.send("error"))
 })
+router.get("/skin/*", async (req, res) => {
+  let username = req.url.split("/").pop();
+  db.get("user:"+username).then(d => {
+    const data = d.skin.replace(/^data:image\/png;base64,/, '');
+    const img = Buffer.from(data, 'base64');
+    res.writeHead(200, {
+      'Content-Type': 'image/png',
+      'Content-Length': img.length
+    });
+    res.end(img);
+  }).catch(() => res.send("error"));
+});
 router.get("/users", (req, res) => {
   db.list("user:").then((users) => { res.json(users) });
-})
+});
 
 const currentMedia = {
   type: "",
   data: ""
-}
+};
 router.get("/currentMedia", async (req, res) => {
   if (currentMedia.data) {
     res.header("Content-Type", currentMedia.type);
@@ -478,7 +504,7 @@ router.post("/newMedia", async (req, res) => {
   await getPostText(req);
   const id = generateId();
   /*let buffer = Buffer.from(req.body)
-  let prefix = "data:"+req.headers['content-type']+";base64,"
+  let prefix = `data:${req.headers['content-type']};base64,`
   let url = prefix + buffer.toString("base64").replace(/(\r\n|\n|\r)/gm,"")
   console.log(prefix)*/
   currentMedia.type = req.headers['content-type'];
@@ -492,19 +518,19 @@ router.post("/newMedia", async (req, res) => {
       Log(error);
       return res.json({ message: error });
     }
-    res.json({ success: true, url: result.secure_url })
-    Log("Media id:",id)
+    res.json({ success: true, url: result.secure_url });
+    Log("Media id:", id);
   })
 })
 // user makes a post/blog
-router.post("/post", validate, async(request, response) => {
-  await getPostData(request)
+router.post("/post", validate, async (request, response) => {
+  await getPostData(request);
   if (!request.body.title) {
     return response.status(401).json({ "message": "A `title` is required" });
   } else if (!request.body.content) {
     return response.status(401).json({ "message": "A `content` is required" });
   }
-  const uniqueId = generateId()
+  const uniqueId = generateId();
   let blog = {
     "type": "blog",
     "username": request.username,
@@ -1042,13 +1068,13 @@ minekhanWs.onrequest = function(request, connection, urlData) {
       if (p) {
         p.done(data.data);
       }
-    } else if (data.type === "pos" || data.type === "setBlock" || data.type === "getSave" || data.type === "message" || data.type === "entityPos" || data.type === "entityPosAll" || data.type === "entityDelete" || data.type === "die" || data.type === "harmEffect" || data.type === "achievment" || data.type === "playSound") {
-      sendPlayers(message.utf8Data);
-    } else if (data.type === "loadSave" || data.type === "hit") {
-      sendPlayer(message.utf8Data, data.TO);
-    } else if(data.type === "kill") {
-      if (data.data === "@a") {
-        sendPlayers(JSON.stringify({ type: "kill", data: data.message }));
+    } else if(data.type === "pos" || data.type === "setBlock" || data.type === "getSave" || data.type === "message" || data.type === "entityPos" || data.type === "entityPosAll" || data.type === "entityDelete" || data.type === "die" || data.type === "harmEffect" || data.type === "achievment" || data.type === "playSound" || data.type === "mySkin") {
+      sendPlayers(message.utf8Data)
+    } else if(data.type === "loadSave" || data.type === "hit"){
+      sendPlayer(message.utf8Data, data.TO)
+    } else if(data.type === "kill"){
+      if(data.data === "@a"){
+        sendPlayers(JSON.stringify({ type: "kill", data: data.message }))
       } else {
         sendPlayerName(JSON.stringify({
           type: "kill",
@@ -1057,13 +1083,13 @@ minekhanWs.onrequest = function(request, connection, urlData) {
       }
     } else if(data.type === "ban") {
       sendPlayerName(JSON.stringify({
-        type: "error",
-        data: "You've been banned from this world."
-      }), data.data);
+        type:"error",
+        data: data.reason ? "You've been banned from this world.\n\nReason:\n"+data.reason : "You've been banned from this world."
+      }), data.data)
       sendPlayers(JSON.stringify({
         type: "message",
         username: "Server",
-        data:data.data + " got banned.",
+        data: data.data + " got banned.",
         fromServer: true
       }));
       Log(`MineKhan: ${data.data} got banned from the server: ${world.name}`);
