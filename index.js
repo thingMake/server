@@ -155,7 +155,7 @@ router.get("/pfp.png", (req,res) => {
   res.sendFile(__dirname+"/pfp.png")
 })
 router.get("/panorama", (req,res) => {
-  res.redirect("https://data.thingmaker.repl.co/images/panorama/halloween.png")
+  res.redirect("https://data.thingmaker.repl.co/images/panorama/desert_house.png")
 })
 
 function getPostData(req){
@@ -470,6 +470,18 @@ router.get("/pfp/*", async(req,res) => {
       res.send(body)
     })*/
     res.redirect(d.pfp)
+  }).catch(() => res.send("error"))
+})
+router.get("/skin/*", async(req,res) => {
+  let username = req.url.split("/").pop()
+  db.get("user:"+username).then(d => {
+    var data = d.skin.replace(/^data:image\/png;base64,/, '');
+    var img = Buffer.from(data, 'base64');
+    res.writeHead(200, {
+      'Content-Type': 'image/png',
+      'Content-Length': img.length
+    });
+    res.end(img);
   }).catch(() => res.send("error"))
 })
 router.get("/users", (req, res) => {
@@ -1054,9 +1066,9 @@ minekhanWs.onrequest = function(request, connection, urlData) {
       if(p){
         p.done(data.data)
       }
-    }else if(data.type === "pos" || data.type === "setBlock" || data.type === "getSave" || data.type === "message" || data.type === "entityPos" || data.type === "entityPosAll" || data.type === "entityDelete" || data.type === "die" || data.type === "harmEffect" || data.type === "achievment" || data.type === "playSound"){
+    }else if(data.type === "pos" || data.type === "setBlock" || data.type === "getSave" || data.type === "message" || data.type === "entityPos" || data.type === "entityPosAll" || data.type === "entityDelete" || data.type === "die" || data.type === "harmEffect" || data.type === "achievment" || data.type === "playSound" || data.type === "mySkin"){
       sendPlayers(message.utf8Data)
-    }else if(data.type === "loadSave" || data.type === "hit" || data.type === "mySkin"){
+    }else if(data.type === "loadSave" || data.type === "hit"){
       sendPlayer(message.utf8Data, data.TO)
     }else if(data.type === "kill"){
       if(data.data === "@a"){
