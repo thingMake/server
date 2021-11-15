@@ -1066,7 +1066,7 @@ minekhanWs.onrequest = function(request, connection, urlData) {
       if(p){
         p.done(data.data)
       }
-    }else if(data.type === "pos" || data.type === "setBlock" || data.type === "getSave" || data.type === "message" || data.type === "entityPos" || data.type === "entityPosAll" || data.type === "entityDelete" || data.type === "die" || data.type === "harmEffect" || data.type === "achievment" || data.type === "playSound" || data.type === "mySkin"){
+    }else if(data.type === "pos" || data.type === "setBlock" || data.type === "getSave" || data.type === "message" || data.type === "entityPos" || data.type === "entityPosAll" || data.type === "entityDelete" || data.type === "die" || data.type === "harmEffect" || data.type === "achievment" || data.type === "playSound" || data.type === "mySkin" || data.type === "setTags"){
       sendPlayers(message.utf8Data)
     }else if(data.type === "loadSave" || data.type === "hit"){
       sendPlayer(message.utf8Data, data.TO)
@@ -1153,6 +1153,9 @@ minekhanWs.onrequest = function(request, connection, urlData) {
       world.players.splice(idx, 1)
     }
   });
+  connection.on("error", function(){
+    console.log("websocket error")
+  })
 };
 
 var postWs = new WebSocketRoom("/postWs")
