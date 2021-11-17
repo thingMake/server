@@ -1153,8 +1153,8 @@ minekhanWs.onrequest = function(request, connection, urlData) {
       world.players.splice(idx, 1)
     }
   });
-  connection.on("error", function(){
-    console.log("websocket error")
+  connection.on("error", function(err){
+    console.log("UH OH!!! Websocket error", err)
   })
 };
 
