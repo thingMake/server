@@ -1177,3 +1177,5 @@ function sendPostWs(obj, id, fromUserId){
 }
 
 //console.clear()
+
+void 0 //don't log stuff
