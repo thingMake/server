@@ -984,7 +984,7 @@ minekhanWs.onrequest = function(request, connection, urlData) {
       id: target,
       players: [connection],
       host: connection,
-      name: target
+      name: "Ghost server "+target
     }
     worlds.push(world)
   }
