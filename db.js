@@ -8,27 +8,29 @@ if (!db.supports.permanence) {
   throw new Error('Persistent storage is required')
 }
 
-  db.get('name', function (err, value) {
-    if (err) return console.log('Ooops!', err) // likely the key was not found
+db.get('name', function (err, value) {
+  if (err) {
+    return console.log('Ooops!', err) // likely the key was not found
+  }
 
-    console.log('name=' + value)
-  })
+  console.log('name=' + value);
+})
 
 module.exports = {
-  get:async function(key){
-    var value = await db.get(key)
-    if(value){
-      return JSON.parse(value)
-    }else{
-      return null
+  async get(key) {
+    const value = await db.get(key);
+    if (value) {
+      return JSON.parse(value);
+    } else {
+      return null;
     }
-  },
-  set:async function(key, value){
-    await db.put(key, JSON.stringify(value))
-    return this
-  },
-  delete:async function(key){
-    await db.del(key)
-    return this
+  }
+  async set(key, value) {
+    await db.put(key, JSON.stringify(value));
+    return this;
+  }
+  async delete(key) {
+    await db.del(key);
+    return this;
   }
 }
