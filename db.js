@@ -24,7 +24,7 @@ module.exports = {
     }
   },
   set:async function(key, value){
-    await db.put(key, value)
+    await db.put(key, JSON.stringify(value))
     return this
   },
   delete:async function(key){
