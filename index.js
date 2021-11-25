@@ -151,12 +151,14 @@ router.get('/log', async(req,res) => {
   str += "</span>"
   res.send(str)
 })
-router.get("/pfp.png", (req,res) => {
+/*router.get("/pfp.png", (req,res) => {
   res.sendFile(__dirname+"/pfp.png")
-})
+})*/
 router.get("/panorama", (req,res) => {
   res.redirect("https://data.thingmaker.repl.co/images/panorama/desert_house.png")
 })
+
+app.use(express.static('public'))
 
 function getPostData(req){
   return new Promise(function(resolve){
