@@ -18,7 +18,7 @@ app.use(cors({
 }))
 const Database = require("@replit/database");
 const db = new Database()
-//const db2 = require("./db.js")
+const db2 = require("./db.js")
 const bcrypt = require('bcrypt')
 const WebSocketServer = require('websocket').server;
 const url = require('url');
