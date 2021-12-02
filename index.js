@@ -525,7 +525,7 @@ router.post("/newMedia", async(req,res) => {
 })
 // user makes a post/blog
 router.post("/post", validate, async(request, response) => {
-  if(!req.username){
+  if(!request.username){
     return response.status(401).json({message:"You need to login to create posts. Login is at the top right."})
   }
   await getPostData(request)
