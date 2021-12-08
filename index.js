@@ -68,7 +68,9 @@ db.get("bannedFromMineKhan").then(r => {
 })
 function banFromMineKhan(who) {
   db.get("user:" + who).then(r => {
-    if(!r) return console.log(who + " doesn't exsist");
+    if (!r) {
+      return console.log(who + " doesn't exsist");
+    }
     bannedFromMineKhan.push(who);
     db.set("bannedFromMineKhan", bannedFromMineKhan).then(() => console.log("done"));
   });
@@ -86,6 +88,7 @@ function generateId() {
   return id.toString(64)
 }*/
 //var genid = 0
+// consider using crypto.randomUUID();
 function generateId() {
   //genid ++
   //return genid
@@ -106,8 +109,8 @@ function valueToString(v, nf) { //for log
   } else if (typeof v === "object") {
     str = "<span style='color:red;'>{";
     let hasTrailing;
-    for(let i in v){
-      str += "<span style='color:blue;'>" + i + "</span>: " + valueToString(v[i], true) + ", ";
+    for (const [key, value] of Object.enteries(v)){
+      str += "<span style='color:blue;'>" + key + "</span>: " + valueToString(value, true) + ", ";
       hasTrailing = true;
     }
     if (hasTrailing) str = str.substring(0, str.length - 2); //remove trailing ", "
@@ -124,10 +127,16 @@ function valueToString(v, nf) { //for log
     if (v.startsWith("New post")) {
       v = v.replace("post","<span style='background:orange;'>post</span>");
     }
+
+    v = v.replace(/(changed their bio|changed their skin)/, "<span style='background:lightgreen;'>$1</span>")
+    
     v = v.replace(/%>/g, "<b style='color:orange; margin-right:15px;'>&gt;</b>");
     v = v.replace(/%</g, "<b style='color:orange; margin-right:15px;'>&nbsp;</b>"); //⋖
-    if (nf) str = "<span style='color:green;'>'" + v + "'</span>";
-    else str = v;
+    if (nf) {
+      str = "<span style='color:green;'>'" + v + "'</span>";
+    } else {
+      str = v;
+    }
   } else str = v;
   return str;
 }
@@ -527,6 +536,9 @@ router.post("/newMedia", async (req, res) => {
 })
 // user makes a post/blog
 router.post("/post", validate, async (request, response) => {
+  if (!request.username){
+    return response.status(401).json({ message: "You need to login to create posts. Login is at the top right." })
+  }
   await getPostData(request);
   if (!request.body.title) {
     return response.status(401).json({ "message": "A `title` is required" });
@@ -537,7 +549,7 @@ router.post("/post", validate, async (request, response) => {
   let blog = {
     "type": "blog",
     "username": request.username,
-    id:uniqueId,
+    id: uniqueId,
     "title": request.body.title,
     "content": request.body.content,
     "followers": [request.username],
