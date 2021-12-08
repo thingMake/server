@@ -124,6 +124,8 @@ function valueToString(v, nf){ //for log
     if(v.startsWith("New post")){
       v = v.replace("post","<span style='background:orange;'>post</span>")
     }
+    v = v.replace(/(changed their bio|changed their skin)/, "<span style='background:lightgreen;'>$1</span>")
+
     v = v.replace(/%>/g, "<b style='color:orange; margin-right:15px;'>&gt;</b>")
     v = v.replace(/%</g, "<b style='color:orange; margin-right:15px;'>&nbsp;</b>")//⋖
     if(nf)str = "<span style='color:green;'>'"+v+"'</span>" 
