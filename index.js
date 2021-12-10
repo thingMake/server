@@ -280,6 +280,11 @@ router.post("/register", async (request, response) => {
       success: false,
       "message": "A `username` is required"
     })
+  }else if (request.body.username.length > 15){
+    return response.json({
+      success:false,
+      message: "Username can only have less than 15 characters."
+    })
   }
 
   if(request.body.username.match(/[^a-zA-Z0-9\-_]/)){
