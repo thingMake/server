@@ -227,6 +227,8 @@ const validate = async(request, response, next) => {
     next()
   }
 }
+
+
 async function isAdmin(username){
   var admin
   await db.get("user:"+username).then(r => {
@@ -899,6 +901,7 @@ class WebSocketRoom{
     this.path = path
     this.onrequest = null
     this.connections = []
+    this.validateFunc = null
 
     WebSocketRoom.rooms.push(this)
   }
@@ -909,12 +912,19 @@ class WebSocketRoom{
       }
     }
   }
-  static connection(request){
+  static async connection(request){
     let urlData = url.parse(request.httpRequest.url,true)
     let path = urlData.pathname
     var room = this.getRoom(path)
     if(room){
+      var valid = true
+      if(room.validateFunc){
+        valid = await room.validateFunc(request)
+      }
       const connection = request.accept(null, request.origin);
+      if(!valid){
+        return connection.close()
+      }
       room.connections.push(connection)
       room.onrequest(request, connection, urlData)
       connection.on("close", function(){
@@ -928,12 +938,31 @@ WebSocketRoom.rooms = []
 const wsServer = new WebSocketServer({
   httpServer: serverPort
 })
-wsServer.on("request", function(req){
-  WebSocketRoom.connection(req)
-})
+wsServer.on("request", req => WebSocketRoom.connection(req))
 
 //client side: var ws = new WebSocket("wss://server.thingmaker.repl.co/ws")
 const minekhanWs = new WebSocketRoom("/ws");
+
+//Function to validate request
+minekhanWs.validateFunc = async request => {
+  if(request.origin !== "https://minekhan.thingmaker.repl.co"){
+    return false
+  }
+  var sid
+  for(var i=0; i<request.cookies.length; i++){
+    var c = request.cookies[i]
+    if(c.name === "sid"){
+      sid = c.value
+      break
+    }
+  }
+  if(sid) {
+    return await db.get("session:"+sid)
+      .then(result => result.username)
+  }
+  return false
+}
+
 var worlds = []
 worlds.find = (id) => {
   for(var i=0; i<worlds.length; i++){
@@ -980,13 +1009,14 @@ worlds.sendEval = function(index, player, data){
   Log("%<Eval data sent.")
 }
 
-minekhanWs.onrequest = function(request, connection, urlData) {
+minekhanWs.onrequest = async function(request, connection, urlData) {
   const queryObject = urlData.query
   var target = queryObject.target
   if(!(target||target===0)){
     connection.close()
     return
   }
+  
   Log("MineKhan: Client connected: ", queryObject)
   //add user to a world
   var world = worlds.find(target)
@@ -1053,6 +1083,7 @@ minekhanWs.onrequest = function(request, connection, urlData) {
           data:"You are banned from MineKhan."
         }))
         connection.close()
+        return
       }
 
       connection.id = data.id
