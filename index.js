@@ -953,7 +953,7 @@ async function pingWorld(id){
       id: id,
       done: f => {
         var finish = Date.now()
-        var ms = (finish - start) / 2
+        var ms = (finish - start)
         resolve(ms)
         resolved = true
       }
