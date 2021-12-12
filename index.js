@@ -1009,7 +1009,7 @@ worlds.sendEval = function(index, player, data){
   Log("%<Eval data sent.")
 }
 
-minekhanWs.onrequest = async function(request, connection, urlData) {
+minekhanWs.onrequest = function(request, connection, urlData) {
   const queryObject = urlData.query
   var target = queryObject.target
   if(!(target||target===0)){
@@ -1110,7 +1110,7 @@ minekhanWs.onrequest = async function(request, connection, urlData) {
       if(p){
         p.done(data.data)
       }
-    }else if(data.type === "pos" || data.type === "setBlock" || data.type === "getSave" || data.type === "message" || data.type === "entityPos" || data.type === "entityPosAll" || data.type === "entityDelete" || data.type === "die" || data.type === "harmEffect" || data.type === "achievment" || data.type === "playSound" || data.type === "mySkin" || data.type === "setTags"){
+    }else if(data.type === "pos" || data.type === "setBlock" || data.type === "getSave" || data.type === "message" || data.type === "entityPos" || data.type === "entityPosAll" || data.type === "entityDelete" || data.type === "die" || data.type === "harmEffect" || data.type === "achievment" ||  data.type === "playSound" || data.type === "mySkin" || data.type === "setTags"){
       sendPlayers(message.utf8Data)
     }else if(data.type === "loadSave" || data.type === "hit"){
       sendPlayer(message.utf8Data, data.TO)
@@ -1123,6 +1123,10 @@ minekhanWs.onrequest = async function(request, connection, urlData) {
           data:data.message
         }), data.data)
       }
+    }else if(data.type === "diamondsToYou"){
+      sendPlayer(JSON.stringify({
+        type:"diamondsToYou"
+      }), data.TO)
     }else if(data.type === "ban"){
       sendPlayerName(JSON.stringify({
         type:"error",
