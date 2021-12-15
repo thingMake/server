@@ -29,6 +29,8 @@ cloudinary.config({
   api_secret: process.env['cloudinary_api_secret']
 });
 const nodemailer = require('nodemailer');
+const requestIp = require('request-ip');
+app.use(requestIp.mw())
 
 let log = []
 async function Log(){
@@ -220,14 +222,26 @@ const validate = async(request, response, next) => {
     await db.get("session:"+sid)
       .then(async(result) => {
         request.username = result.username
-        next()
+        db.get("user:"+request.username).then(u => {
+          if(u){
+            u.ip = u.ip || []
+            if(request.clientIp && !u.ip.includes(request.clientIp)) {
+              u.ip.push(request.clientIp)
+            }
+            db.set("user:"+request.username, u).then(() => {
+              next()
+            })
+          }else{
+            request.username = null
+            next()
+          }
+        })
       }).catch((e) => response.status(401).send(/*"Invalid session id"*/""))
   } else {
     /*response.status(401).send*///console.log("Not logged in")
     next()
   }
 }
-
 
 async function isAdmin(username){
   var admin
@@ -294,8 +308,8 @@ router.post("/register", async (request, response) => {
   }
 
   var exsists = false
-  await db.list("user:"+request.body.username).then(matches => {
-    if(matches.length){
+  await db.get("user:"+request.body.username).then(u => {
+    if(u){
       exsists = true
       response.status(401).json({
         success: false,
