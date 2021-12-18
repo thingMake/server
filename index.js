@@ -972,7 +972,15 @@ minekhanWs.validateFunc = async request => {
   }
   if(sid) {
     return await db.get("session:"+sid)
-      .then(result => result.username)
+      .then(async result => {
+        if(await db.get("user:"+result.username).then(u => {
+          if(u) request.isAdmin = u.admin || false
+          else return true
+        })){
+          return false
+        }
+        return result.username
+      })
   }
   return false
 }
@@ -1032,6 +1040,8 @@ minekhanWs.onrequest = function(request, connection, urlData) {
   }
   
   Log("MineKhan: Client connected: ", queryObject)
+  connection.isAdmin = request.isAdmin
+
   //add user to a world
   var world = worlds.find(target)
   if(world){
@@ -1142,6 +1152,21 @@ minekhanWs.onrequest = function(request, connection, urlData) {
         type:"diamondsToYou"
       }), data.TO)
     }else if(data.type === "ban"){
+      if(connection.isAdmin){
+        sendPlayer(JSON.stringify({
+          type:"message",
+          username:"Server",
+          data:"You can't ban "+data.data,
+          fromServer:true
+        }), data.FROM)
+        sendPlayers(JSON.stringify({
+          type:"message",
+          username:"Server",
+          data: "The host tried to ban "+data.data+".",
+          fromServer:true
+        }))
+        return
+      }
       sendPlayerName(JSON.stringify({
         type:"error",
         data: data.reason ? "You've been banned from this world.\n\nReason:\n"+data.reason : "You've been banned from this world."
