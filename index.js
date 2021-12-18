@@ -1098,6 +1098,14 @@ minekhanWs.onrequest = function(request, connection, urlData) {
       }
     }
   }
+  function findPlayer(id){
+    for(var i=0; i<world.players.length; i++){
+      var p = world.players[i]
+      if(p.username === id){
+        return p
+      }
+    }
+  }
   connection.on('message', function(message) {
     var data = JSON.parse(message.utf8Data)
     if(data.type === "connect"){
@@ -1152,7 +1160,8 @@ minekhanWs.onrequest = function(request, connection, urlData) {
         type:"diamondsToYou"
       }), data.TO)
     }else if(data.type === "ban"){
-      if(connection.isAdmin){
+      var banWho = findPlayer(data.data)
+      if(banWho && banWho.isAdmin){
         sendPlayer(JSON.stringify({
           type:"message",
           username:"Server",
