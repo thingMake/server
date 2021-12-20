@@ -146,21 +146,22 @@ router.get('/test', function(req, res){
 router.get('/log', async(req,res) => {
   var log = await db.get("log")
   if(!log) return res.send("Empty")
-  var str = "<span style='font-family:monospace;'>"
+  var str = "<style>#logContent>span{max-width:100%;text-overflow:ellipsis;white-space:nowrap;display:inline-block;overflow:hidden;}</style><div id='logContent' style='font-family:monospace;'>"
   log.forEach(v => {
+    str += "<span>"
     v.forEach(r => {
       str += valueToString(r)+" "
     })
-    str += "<br>"
+    str += "</span><br>"
   })
-  str += "</span>"
+  str += "</div>"
   res.send(str)
 })
 /*router.get("/pfp.png", (req,res) => {
   res.sendFile(__dirname+"/pfp.png")
 })*/
 router.get("/panorama", (req,res) => {
-  res.redirect("https://data.thingmaker.repl.co/images/panorama/desert_house.png")
+  res.redirect("https://data.thingmaker.repl.co/images/panorama/christmas.png")
 })
 
 app.use(express.static('public'))
