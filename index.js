@@ -72,6 +72,7 @@ function banFromMineKhan(who){
   db.get("user:"+who).then(r => {
     if(!r) return console.log(who+" doesn't exsist")
     bannedFromMineKhan.push(who)
+    if(r.ip) bannedFromMineKhan.push(...r.ip)
     db.set("bannedFromMineKhan", bannedFromMineKhan).then(() => console.log("done"))
   })
 }
@@ -79,7 +80,16 @@ function unbanFromMineKhan(who){
   var i = bannedFromMineKhan.indexOf(who)
   if(i === -1) return console.log(who+" is not on the banned list")
   bannedFromMineKhan.splice(i,1)
-  db.set("bannedFromMineKhan", bannedFromMineKhan).then(() => console.log("done"))
+  db.get("user:"+who).then(r => {
+    if(r.ip){
+      for(var j=0; j<r.ip.length; j++){
+        var i = bannedFromMineKhan.indexOf(r.ip[j])
+        if(i === -1) console.log(who+" is not on the banned list")
+        else bannedFromMineKhan.splice(i,1)
+      }
+    }
+    db.set("bannedFromMineKhan", bannedFromMineKhan).then(() => console.log("done"))
+  })
 }
 
 /*var id = 0xf
@@ -155,6 +165,8 @@ router.get('/log', async(req,res) => {
     str += "</span><br>"
   })
   str += "</div>"
+  str += "<br><br>"
+  str += "People banned from MineKhan: "+bannedFromMineKhan.join(", ")
   res.send(str)
 })
 /*router.get("/pfp.png", (req,res) => {
@@ -963,6 +975,11 @@ minekhanWs.validateFunc = async request => {
   if(request.origin !== "https://minekhan.thingmaker.repl.co"){
     return false
   }
+  var ip = requestIp.getClientIp(request)
+  if(bannedFromMineKhan.includes(ip)){
+    return false
+  }
+
   var sid
   for(var i=0; i<request.cookies.length; i++){
     var c = request.cookies[i]
