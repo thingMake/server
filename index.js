@@ -3,6 +3,10 @@ Useful functions:
 LogAllOut, promoteToAdmin, deleteAccount, banFromMineKhan, unbanFromMineKhan
 */
 
+//Variables
+var multiplayerOn = true
+var multiplayerMsg = "No, No!" //message when multiplayer is off
+
 const express = require('express');
 const app = express();
 var cookieParser = require('cookie-parser');
@@ -945,10 +949,10 @@ class WebSocketRoom{
     var room = this.getRoom(path)
     if(room){
       var valid = true
-      if(room.validateFunc){
-        valid = await room.validateFunc(request)
-      }
       const connection = request.accept(null, request.origin);
+      if(room.validateFunc){
+        valid = await room.validateFunc(request, connection)
+      }
       if(!valid){
         return connection.close()
       }
@@ -971,7 +975,15 @@ wsServer.on("request", req => WebSocketRoom.connection(req))
 const minekhanWs = new WebSocketRoom("/ws");
 
 //Function to validate request
-minekhanWs.validateFunc = async request => {
+minekhanWs.validateFunc = async (request, connection) => {
+  if(!multiplayerOn){
+    connection.sendUTF(JSON.stringify({
+      type:"error",
+      data:multiplayerMsg
+    }))
+    return
+  }
+
   if(request.origin !== "https://minekhan.thingmaker.repl.co"){
     return false
   }
@@ -1043,9 +1055,16 @@ worlds.sendEval = function(index, player, data){
   Log("%>worlds["+index+"].players["+player+"].sendUTF('{\"type\":\"eval\",\"data\":\""+data+"\"}')")
   var world = worlds[index]
   if(!world) return Log("%<Error: worlds["+index+"] is not defined")
-  var p = world.players[player]
-  if(!p) return Log("%<Error: worlds["+index+"].players["+player+"] is not defined")
-  p.sendUTF(JSON.stringify({type:"eval",data:data}))
+  if(player === "@a"){
+    world.players.forEach(p => {
+      p.sendUTF(JSON.stringify({type:"eval",data:data}))
+    })
+  }else{
+    var p = world.players[player]
+    if(!p) return Log("%<Error: worlds["+index+"].players["+player+"] is not defined")
+    p.sendUTF(JSON.stringify({type:"eval",data:data}))
+    Log("%<Eval data sent.")
+  }
   Log("%<Eval data sent.")
 }
 
@@ -1079,6 +1098,12 @@ minekhanWs.onrequest = function(request, connection, urlData) {
       if(p !== connection){
         p.sendUTF(msg)
       }
+    }
+  }
+  function sendAllPlayers(msg){
+    for(var i=0; i<world.players.length; i++){
+      var p = world.players[i]
+      p.sendUTF(msg)
     }
   }
   function sendPlayer(msg, to){
@@ -1218,9 +1243,11 @@ minekhanWs.onrequest = function(request, connection, urlData) {
         fromServer:true
       }), data.FROM)
     }else if(data.type === "eval"){
-      if(connection === world.host){
+      if(connection === world.host || connection.isAdmin){
         var o = JSON.stringify({type:"eval",data:data.data})
-        if(data.TO){
+        if(data.TO === "@A"){
+          sendAllPlayers(o)
+        }else if(data.TO){
           sendPlayerName(o, data.TO)
         }else{
           sendPlayers(o)
