@@ -949,10 +949,10 @@ class WebSocketRoom{
     var room = this.getRoom(path)
     if(room){
       var valid = true
-      const connection = request.accept(null, request.origin);
       if(room.validateFunc){
-        valid = await room.validateFunc(request, connection)
+        valid = await room.validateFunc(request)
       }
+      const connection = request.accept(null, request.origin);
       if(!valid){
         return connection.close()
       }
@@ -977,11 +977,7 @@ const minekhanWs = new WebSocketRoom("/ws");
 //Function to validate request
 minekhanWs.validateFunc = async (request, connection) => {
   if(!multiplayerOn){
-    connection.sendUTF(JSON.stringify({
-      type:"error",
-      data:multiplayerMsg
-    }))
-    return
+    return false
   }
 
   if(request.origin !== "https://minekhan.thingmaker.repl.co"){
