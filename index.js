@@ -177,7 +177,7 @@ router.get('/log', async(req,res) => {
   res.sendFile(__dirname+"/pfp.png")
 })*/
 router.get("/panorama", (req,res) => {
-  res.redirect("https://data.thingmaker.repl.co/images/panorama/christmas.png")
+  res.redirect("https://data.thingmaker.repl.co/images/panorama/2022.png")
 })
 
 app.use(express.static('public'))
@@ -949,10 +949,12 @@ class WebSocketRoom{
     var room = this.getRoom(path)
     if(room){
       var valid = true
+      var options = {send:null}
       if(room.validateFunc){
-        valid = await room.validateFunc(request)
+        valid = await room.validateFunc(request, options)
       }
       const connection = request.accept(null, request.origin);
+      if(options.send) connection.sendUTF(options.send)
       if(!valid){
         return connection.close()
       }
@@ -975,8 +977,12 @@ wsServer.on("request", req => WebSocketRoom.connection(req))
 const minekhanWs = new WebSocketRoom("/ws");
 
 //Function to validate request
-minekhanWs.validateFunc = async (request, connection) => {
+minekhanWs.validateFunc = async (request, options) => {
   if(!multiplayerOn){
+    options.send = JSON.stringify({
+      type:"error",
+      data:multiplayerMsg
+    })
     return false
   }
 
@@ -1271,6 +1277,10 @@ minekhanWs.onrequest = function(request, connection, urlData) {
     if(connection === world.host){
       var name = world.name
       var playerAmount = world.players.length
+      sendPlayers(JSON.stringify({
+        type:"error",
+        data: "Server closed"
+      }))
       closePlayers()
       worlds.splice(worlds.indexOf(world), 1)
       world = {}
