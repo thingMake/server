@@ -3,6 +3,10 @@ Useful functions:
 LogAllOut, promoteToAdmin, deleteAccount, banFromMineKhan, unbanFromMineKhan
 */
 
+//Variables
+var multiplayerOn = true
+var multiplayerMsg = "No, No!" //message when multiplayer is off
+
 const express = require('express');
 const app = express();
 const cookieParser = require('cookie-parser');
@@ -29,6 +33,8 @@ cloudinary.config({
   api_secret: process.env['cloudinary_api_secret']
 });
 const nodemailer = require('nodemailer');
+const requestIp = require('request-ip');
+app.use(requestIp.mw())
 
 let log = [];
 async function Log() {
@@ -66,20 +72,39 @@ db.get("bannedFromMineKhan").then(r => {
     bannedFromMineKhan = [];
   }
 })
+
 function banFromMineKhan(who) {
   db.get("user:" + who).then(r => {
     if (!r) {
       return console.log(who + " doesn't exsist");
     }
     bannedFromMineKhan.push(who);
+    if (r.ip) {
+      bannedFromMineKhan.push(...r.ip);
+    }
     db.set("bannedFromMineKhan", bannedFromMineKhan).then(() => console.log("done"));
-  });
+  })
 }
+
 function unbanFromMineKhan(who) {
   const i = bannedFromMineKhan.indexOf(who);
-  if(i === -1) return console.log(who + " is not on the banned list");
+  if (i === -1) {
+    return console.log(who + " is not on the banned list");
+  }
   bannedFromMineKhan.splice(i, 1);
-  db.set("bannedFromMineKhan", bannedFromMineKhan).then(() => console.log("done"));
+  db.get("user:" + who).then(r => {
+    if (r.ip) {
+      for (let j = 0; j < r.ip.length; j++) {
+        const i = bannedFromMineKhan.indexOf(r.ip[j]);
+        if (i === -1) {
+          console.log(who + " is not on the banned list");
+        } else {
+          bannedFromMineKhan.splice(i, 1);
+        }
+      }
+    }
+    db.set("bannedFromMineKhan", bannedFromMineKhan).then(() => console.log("done"));
+  })
 }
 
 /*let id = 0xf
@@ -148,25 +173,31 @@ router.get('/', function(req, res) {
 router.get('/test', function (req, res) {
   res.send("test");
 });
-router.get('/log', async (req,res) => {
+
+router.get('/log', async (req, res) => {
   const log = await db.get("log");
-  if (!log) return res.send("Empty");
-  let str = "<span style='font-family:monospace;'>";
+  if (!log) {
+    return res.send("Empty");
+  }
+  let str = "<style>#logContent>span{max-width:100%;text-overflow:ellipsis;white-space:nowrap;display:inline-block;overflow:hidden;}</style><div id='logContent' style='font-family:monospace;'>";
   log.forEach(v => {
+    str += "<span>";
     v.forEach(r => {
-      str += valueToString(r) + " "
+      str += valueToString(r) + " ";
     });
-    str += "<br>";
+    str += "</span><br>";
   });
-  str += "</span>";
+  str += "</div>";
+  str += "<br><br>";
+  str += "People banned from MineKhan: " + bannedFromMineKhan.join(", ");
   res.send(str);
-})
+});
 /*router.get("/pfp.png", (req, res) => {
   res.sendFile(__dirname + "/pfp.png")
 })*/
-router.get("/panorama", (req,res) => {
-  res.redirect("https://data.thingmaker.repl.co/images/panorama/desert_house.png")
-})
+router.get("/panorama", (req, res) => {
+  res.redirect("https://data.thingmaker.repl.co/images/panorama/2022.png");
+});
 
 app.use(express.static('public'))
 
@@ -218,41 +249,57 @@ function logout(request, res){
     });
     await db.delete("session:" + sid).then(() => {
       resolve();
-    }).catch(e => {Log(e)});
+    }).catch(e => {
+      Log(e);
+    });
   })
 }
 async function validate(request, response, next) => {
   const sid = request.cookies ? request.cookies.sid : null;
   if (sid) {
     await db.get("session:" + sid);
-      .then(async(result) => {
+      .then(async (result) => {
         request.username = result.username;
-        next();
+        db.get("user:" + request.username).then(u => {
+          if (u) {
+            u.ip = u.ip || [];
+            if (request.clientIp && !u.ip.includes(request.clientIp)) {
+              u.ip.push(request.clientIp);
+            }
+            db.set("user:" + request.username, u).then(() => {
+              next();
+            });
+          } else {
+            request.username = null;
+            next();
+          }
+        })
       }).catch((e) => response.status(401).send(/*"Invalid session id"*/""));
   } else {
     /*response.status(401).send*///console.log("Not logged in")
     next();
   }
 }
-async function isAdmin(username){
+
+async function isAdmin(username) {
   let admin;
   await db.get("user:" + username).then(r => {
     admin = r.admin;
   }).catch(e => Log(e));
   return admin;
 }
-async function notif(data, username){
+async function notif(data, username) {
   await db.get("user:" + username).then(async u => {
     u.notifs = u.notifs || [];
     u.notifs.push({
-      notif:data,
+      notif: data,
       id: generateId(),
       read: false
     });
     await db.set("user:" + username, u).then(() => {});
   }).catch(e => Log(e));
 }
-function addNotif(data, u){
+function addNotif(data, u) {
   u.notifs = u.notifs || [];
   u.notifs.push({
     notif: data,
@@ -298,10 +345,10 @@ router.post("/register", async (request, response) => {
     return response.json({ message: "Username can only contain characters: A-Z, a-z, 0-9, - and _" });
   }
 
-  let exsists = false
-  await db.list("user:" + request.body.username).then(matches => {
-    if (matches.length) {
-      exsists = true;
+  let exsists = false;
+  await db.get("user:" + request.body.username).then(u => {
+    if (u) {
+      exsists = true
       response.status(401).json({
         success: false,
         message: "Account already exsists"
@@ -908,6 +955,7 @@ class WebSocketRoom {
     this.path = path
     this.onrequest = null
     this.connections = []
+    this.validateFunc = null
 
     WebSocketRoom.rooms.push(this)
   }
@@ -918,17 +966,28 @@ class WebSocketRoom {
       }
     }
   }
-  static connection(request) {
-    let urlData = url.parse(request.httpRequest.url, true)
-    let path = urlData.pathname
-    const room = this.getRoom(path)
-    if(room){
+  static async connection(request) {
+    let urlData = url.parse(request.httpRequest.url, true);
+    let path = urlData.pathname;
+    const room = this.getRoom(path);
+    if (room) {
+      let valid = true;
+      const options = { send: null };
+      if (room.validateFunc) {
+        valid = await room.validateFunc(request, options);
+      }
       const connection = request.accept(null, request.origin);
-      room.connections.push(connection)
-      room.onrequest(request, connection, urlData)
-      connection.on("close", function(){
-        const idx = room.connections.indexOf(connection)
-        room.connections.splice(idx, 1)
+      if (options.send) {
+        connection.sendUTF(options.send);
+      }
+      if (!valid) {
+        return connection.close();
+      }
+      room.connections.push(connection);
+      room.onrequest(request, connection, urlData);
+      connection.on("close", function () {
+        const idx = room.connections.indexOf(connection);
+        room.connections.splice(idx, 1);
       })
     }
   }
@@ -937,66 +996,125 @@ WebSocketRoom.rooms = []
 const wsServer = new WebSocketServer({
   httpServer: serverPort
 })
-wsServer.on("request", function(req){
-  WebSocketRoom.connection(req)
-})
+wsServer.on("request", req => WebSocketRoom.connection(req))
 
 //client side: let ws = new WebSocket("wss://server.thingmaker.repl.co/ws")
 const minekhanWs = new WebSocketRoom("/ws");
-let worlds = []
+
+//Function to validate request
+minekhanWs.validateFunc = async (request, options) => {
+  if (!multiplayerOn) {
+    options.send = JSON.stringify({
+      type: "error",
+      data: multiplayerMsg
+    });
+    return false;
+  }
+
+  if (request.origin !== "https://minekhan.thingmaker.repl.co") {
+    return false;
+  }
+  const ip = requestIp.getClientIp(request);
+  if (bannedFromMineKhan.includes(ip)) {
+    return false;
+  }
+
+  let sid;
+  for (let i = 0; i < request.cookies.length; i++) {
+    const c = request.cookies[i];
+    if (c.name === "sid") {
+      sid = c.value;
+      break;
+    }
+  }
+  if (sid) {
+    return await db.get("session:" + sid)
+      .then(async result => {
+        if (await db.get("user:" + result.username).then(u => {
+          if (u) {
+            request.isAdmin = u.admin || false;
+          } else {
+            return true;
+          }
+        })) {
+          return false;
+        }
+        return result.username;
+      })
+  }
+  return false;
+}
+
+const worlds = [];
 worlds.find = (id) => {
   for (let i = 0; i < worlds.length; i++){
     if (worlds[i].id === id){
-      return worlds[i]
+      return worlds[i];
     }
   }
 }
 worlds.pings = {}
 async function pingWorld(id){
   const w = worlds.find(id)
-  if(!w) return "error"
+  if (!w) {
+    return "error";
+  }
   const start = Date.now()
-  const ms = await new Promise((resolve,reject) => {
-    let resolved = false
+  const ms = await new Promise((resolve, reject) => {
+    let resolved = false;
     worlds.pings[id] = {
       id: id,
       done: f => {
-        const finish = Date.now()
-        const ms = (finish - start) / 2
-        resolve(ms)
-        resolved = true
+        const finish = Date.now();
+        const ms = (finish - start);
+        resolve(ms);
+        resolved = true;
       }
-    }
+    };
     w.host.sendUTF(JSON.stringify({
       type: "ping"
     }))
     setTimeout(() => {
-      if(!resolved){
-        resolve("timeout")
+      if (!resolved) {
+        resolve("timeout");
       }
-    }, 20000)
-  })
-  return ms
+    }, 20000);
+  });
+  return ms;
 }
 
-worlds.sendEval = function(index, player, data) {
-  Log(`%>worlds[${index}].players[${player}].sendUTF('{\"type\":\"eval\",\"data\":\"${data}\"}')`);
+worlds.sendEval = function (index, player, data) {
+  Log(`%>worlds[${index}].players[${player}].sendUTF('{"type":"eval","data":"${data}"}')`);
   const world = worlds[index];
-  if(!world) return Log(`%<Error: worlds[${index}] is not defined`);
-  const p = world.players[player];
-  if(!p) return Log(`%<Error: worlds[${index}].players[${player}] is not defined`);
-  p.sendUTF(JSON.stringify({ type: "eval",data: data }));
+  if (!world) {
+    return Log("%<Error: worlds["+index+"] is not defined");
+  }
+  if (player === "@a") {
+    world.players.forEach(p => {
+      p.sendUTF(JSON.stringify({ type: "eval", data: data }));
+    })
+  } else {
+    const p = world.players[player];
+    if (!p) {
+      return Log("%<Error: worlds["+index+"].players["+player+"] is not defined");
+    }
+    p.sendUTF(JSON.stringify({ type: "eval", data: data }));
+    Log("%<Eval data sent.");
+  }
   Log("%<Eval data sent.");
 }
 
-minekhanWs.onrequest = function(request, connection, urlData) {
-  const queryObject = urlData.query
-  let target = queryObject.target
+minekhanWs.onrequest = function (request, connection, urlData) {
+  const queryObject = urlData.query;
+  let target = queryObject.target;
   if(!(target || target === 0)){
-    connection.close()
+    connection.close();
     return
   }
+  
   Log("MineKhan: Client connected: ", queryObject)
+  connection.isAdmin = request.isAdmin
+
   //add user to a world
   let world = worlds.find(target)
   if (world) {
@@ -1010,17 +1128,23 @@ minekhanWs.onrequest = function(request, connection, urlData) {
     }
     worlds.push(world)
   }
-  function sendPlayers(msg){
-    for(let i = 0; i < world.players.length; i++){
-      let p = world.players[i]
-      if (p !== connection){
-        p.sendUTF(msg)
+  function sendPlayers(msg) {
+    for (let i = 0; i < world.players.length; i++) {
+      let p = world.players[i];
+      if (p !== connection) {
+        p.sendUTF(msg);
       }
     }
   }
+  function sendAllPlayers(msg) {
+    for (let i = 0; i < world.players.length; i++) {
+      const p = world.players[i];
+      p.sendUTF(msg);
+    }
+  }
   function sendPlayer(msg, to) {
-    for(let i = 0; i < world.players.length; i++) {
-      let p = world.players[i];
+    for (let i = 0; i < world.players.length; i++) {
+      const p = world.players[i];
       if (p.id === to) {
         p.sendUTF(msg);
       }
@@ -1033,45 +1157,54 @@ minekhanWs.onrequest = function(request, connection, urlData) {
     for (let i = 0; i < world.players.length; i++) {
       let p = world.players[i];
       if (p.username === to) {
-        p.sendUTF(msg)
+        p.sendUTF(msg);
       }
     }
   }
   function closePlayers() {
     for (let i = 0; i < world.players.length; i++) {
-      const p = world.players[i]
+      const p = world.players[i];
       if (p !== connection) {
-        p.close()
+        p.close();
       }
     }
   }
   function closePlayer(id) {
     for (let i = 0; i < world.players.length; i++) {
-      const p = world.players[i]
+      const p = world.players[i];
       if (p.username === id) {
-        p.close()
+        p.close();
       }
     }
   }
-  connection.on('message', function(message) {
-    let data = JSON.parse(message.utf8Data)
+  function findPlayer(id){
+    for (let i = 0; i < world.players.length; i++) {
+      const p = world.players[i];
+      if (p.username === id) {
+        return p;
+      }
+    }
+  }
+  connection.on('message', function (message) {
+    let data = JSON.parse(message.utf8Data);
     if (data.type === "connect") {
       if (bannedFromMineKhan.includes(data.username)) {
         sendThisPlayer(JSON.stringify({
           type: "error",
           data: "You are banned from MineKhan."
         }))
-        connection.close()
+        connection.close();
+        return;
       }
 
-      connection.id = data.id
-      connection.username = data.username
+      connection.id = data.id;
+      connection.username = data.username;
       sendPlayers(JSON.stringify({
         type: "message",
         data: `${data.username} is connecting. ${world.players.length} players now.`,
         username: "Server",
         fromServer:true
-      }))
+      }));
       Log(`MineKhan: ${data.username} joined the server: ${world.name}`)
     } else if (data.type === "joined") {
       sendPlayers(JSON.stringify({
@@ -1079,7 +1212,7 @@ minekhanWs.onrequest = function(request, connection, urlData) {
         data: data.username + " joined. ",
         username: "Server",
         fromServer: true
-      }))
+      }));
     } else if (data.type === "init") {
       world.name = data.name;
       Log("MineKhan: Server opened: " + world.name, worlds.length + " worlds");
@@ -1088,7 +1221,7 @@ minekhanWs.onrequest = function(request, connection, urlData) {
       if (p) {
         p.done(data.data);
       }
-    } else if (data.type === "pos" || data.type === "setBlock" || data.type === "getSave" || data.type === "message" || data.type === "entityPos" || data.type === "entityPosAll" || data.type === "entityDelete" || data.type === "die" || data.type === "harmEffect" || data.type === "achievment" || data.type === "playSound" || data.type === "mySkin" || data.type === "setTags") {
+     }else if(data.type === "pos" || data.type === "setBlock" || data.type === "getSave" || data.type === "message" || data.type === "entityPos" || data.type === "entityPosAll" || data.type === "entityDelete" || data.type === "die" || data.type === "harmEffect" || data.type === "achievment" ||  data.type === "playSound" || data.type === "mySkin" || data.type === "setTags") {
       sendPlayers(message.utf8Data)
     } else if (data.type === "loadSave" || data.type === "hit") {
       sendPlayer(message.utf8Data, data.TO)
@@ -1101,10 +1234,30 @@ minekhanWs.onrequest = function(request, connection, urlData) {
           data: data.message
         }), data.data);
       }
-    } else if(data.type === "ban") {
+    } else if (data.type === "diamondsToYou") {
+      sendPlayer(JSON.stringify({
+        type:"diamondsToYou"
+      }), data.TO);
+    } else if (data.type === "ban") {
+      const banWho = findPlayer(data.data);
+      if (banWho && banWho.isAdmin) {
+        sendPlayer(JSON.stringify({
+          type: "message",
+          username: "Server",
+          data: "You can't ban " + data.data,
+          fromServer: true
+        }), data.FROM);
+        sendPlayers(JSON.stringify({
+          type: "message",
+          username: "Server",
+          data: `The host tried to ban ${data.data}.`,
+          fromServer: true
+        }));
+        return;
+      }
       sendPlayerName(JSON.stringify({
-        type:"error",
-        data: data.reason ? "You've been banned from this world.\n\nReason:\n"+data.reason : "You've been banned from this world."
+        type: "error",
+        data: data.reason ? "You've been banned from this world.\n\nReason:\n" + data.reason : "You've been banned from this world."
       }), data.data)
       sendPlayers(JSON.stringify({
         type: "message",
@@ -1120,16 +1273,18 @@ minekhanWs.onrequest = function(request, connection, urlData) {
         arr.push(u.username);
       });
       sendPlayer(JSON.stringify({
-        type:"message",
-        username:"Server",
-        data:arr.join(", "),
-        fromServer:true
-      }), data.FROM)
-    } else if (data.type === "eval") {
-      if (connection === world.host) {
-        let o = JSON.stringify({ type: "eval", data: data.data })
-        if (data.TO) {
-          sendPlayerName(o, data.TO)
+        type: "message",
+        username: "Server",
+        data: arr.join(", "),
+        fromServer: true
+      }), data.FROM);
+    } else if(data.type === "eval") {
+      if (connection === world.host || connection.isAdmin) {
+        const o = JSON.stringify({ type: "eval", data: data.data });
+        if (data.TO === "@A") {
+          sendAllPlayers(o);
+        } else if (data.TO) {
+          sendPlayerName(o, data.TO);
         } else {
           sendPlayers(o);
           console.log("all");
@@ -1152,14 +1307,18 @@ minekhanWs.onrequest = function(request, connection, urlData) {
     }
   });
   connection.on('close', function(reasonCode, description) {
-    const idx = world.players.indexOf(connection)
+    const idx = world.players.indexOf(connection);
     if (connection === world.host) {
-      let name = world.name;
-      let playerAmount = world.players.length;
+      const name = world.name;
+      const playerAmount = world.players.length;
+      sendPlayers(JSON.stringify({
+        type: "error",
+        data: "Server closed"
+      }));
       closePlayers();
       worlds.splice(worlds.indexOf(world), 1);
       world = {};
-      Log(`MineKhan: Server closed: ${name} with ${playerAmount} people`, worlds.length + " worlds")
+      Log(`MineKhan: Server closed: ${name} with ${playerAmount} people ${worlds.length} worlds`);
     } else {
       sendPlayers(JSON.stringify({
         type: "dc",
@@ -1175,9 +1334,9 @@ minekhanWs.onrequest = function(request, connection, urlData) {
       world.players.splice(idx, 1)
     }
   });
-  connection.on("error", function(err){
-    console.log("UH OH!!! Websocket error", err)
-  })
+  connection.on("error", function (err) {
+    console.log("UH OH!!! Websocket error", err);
+  });
 };
 
 let postWs = new WebSocketRoom("/postWs");
