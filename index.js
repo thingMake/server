@@ -4,8 +4,8 @@ LogAllOut, promoteToAdmin, deleteAccount, banFromMineKhan, unbanFromMineKhan
 */
 
 //Variables
-var multiplayerOn = true
-var multiplayerMsg = "No, No!" //message when multiplayer is off
+let multiplayerOn = true;
+const multiplayerMsg = "No, No!"; //message when multiplayer is off
 
 const express = require('express');
 const app = express();
@@ -173,14 +173,17 @@ router.get('/', function(req, res) {
 router.get('/test', function (req, res) {
   res.send("test");
 });
-
 router.get('/log', async (req, res) => {
+  const options = url.parse(req.url, true).query;
   const log = await db.get("log");
   if (!log) {
     return res.send("Empty");
   }
   let str = "<style>#logContent>span{max-width:100%;text-overflow:ellipsis;white-space:nowrap;display:inline-block;overflow:hidden;}</style><div id='logContent' style='font-family:monospace;'>";
   log.forEach(v => {
+    if (options.nominekhan && v[0].startsWith("MineKhan: ")) {
+      return;
+    }
     str += "<span>";
     v.forEach(r => {
       str += valueToString(r) + " ";
@@ -254,17 +257,21 @@ function logout(request, res){
     });
   })
 }
-async function validate(request, response, next) => {
+
+async function validate(request, response, next) {
   const sid = request.cookies ? request.cookies.sid : null;
   if (sid) {
-    await db.get("session:" + sid);
+    await db.get("session:" + sid)
       .then(async (result) => {
-        request.username = result.username;
-        db.get("user:" + request.username).then(u => {
+        if (!result) {
+          return;
+        }
+        request.username = result.username
+        db.get("user:" +  request.username).then(u => {
           if (u) {
-            u.ip = u.ip || [];
+            u.ip = u.ip || []
             if (request.clientIp && !u.ip.includes(request.clientIp)) {
-              u.ip.push(request.clientIp);
+              u.ip.push(request.clientIp)
             }
             db.set("user:" + request.username, u).then(() => {
               next();
