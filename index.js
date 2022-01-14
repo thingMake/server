@@ -1,6 +1,6 @@
 /*
 Useful functions:
-LogAllOut, promoteToAdmin, deleteAccount, banFromMineKhan, unbanFromMineKhan
+LogAllOut, promoteToAdmin, deleteAccount, banFromMineKhan, unbanFromMineKhan, unpromoteFromAdmin
 */
 
 //Variables
@@ -132,6 +132,9 @@ function valueToString(v, nf){ //for log
     str = "<span style='color:orange;'>"+v.toString()+"</span>"
   }else if(typeof v === "string"){
     if(v.startsWith("MineKhan")){
+      v = v.replace(/&/g,"&amp;")
+      v = v.replace(/</g,"&lt;")
+      v = v.replace(/>/g,"&gt;")
       v = v.replace("MineKhan","<span style='background:yellow;'>MineKhan</span>")
     }
     if(v.startsWith("New comment")){
@@ -925,6 +928,14 @@ function promoteToAdmin(username){
     if(!r) return console.log("user doesn't exsist")
     r.admin = true
     addNotif("You have been promoted to admin",r)
+    db.set("user:"+username, r).then(() => console.log("done"))
+  })
+}
+function unpromoteFromAdmin(username){
+  db.get("user:"+username).then(r =>{
+    if(!r) return console.log("user doesn't exsist")
+    r.admin = false
+    addNotif("You have been unpromoted from admin",r)
     db.set("user:"+username, r).then(() => console.log("done"))
   })
 }
