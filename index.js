@@ -50,7 +50,7 @@ async function Log(){
 }
 
 function clearLog(){
-  db.delete("log").then(() => {
+  db.set("log",[]).then(() => {
     console.clear()
     log = []
   })
@@ -163,7 +163,7 @@ router.get('/test', function(req, res){
 router.get('/log', async(req,res) => {
   var options = url.parse(req.url,true).query
   var log = await db.get("log")
-  if(!log) return res.send("Empty")
+  if(!log || !log.length) return res.send("Empty")
   var str = "<style>#logContent>span{max-width:100%;text-overflow:ellipsis;white-space:nowrap;display:inline-block;overflow:hidden;}</style><div id='logContent' style='font-family:monospace;'>"
   log.forEach(v => {
     if(options.nominekhan && v[0].startsWith("MineKhan: ")) return
@@ -243,7 +243,7 @@ const validate = async(request, response, next) => {
   if(sid) {
     await db.get("session:"+sid)
       .then(async(result) => {
-        if(!result) return
+        if(!result) return next()
         request.username = result.username
         db.get("user:"+request.username).then(u => {
           if(u){
