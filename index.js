@@ -1,6 +1,6 @@
 /*
 Useful functions:
-LogAllOut, promoteToAdmin, deleteAccount, banFromMineKhan, unbanFromMineKhan
+LogAllOut, promoteToAdmin, deleteAccount, banFromMineKhan, unbanFromMineKhan, unpromoteFromAdmin
 */
 
 //Variables
@@ -49,8 +49,9 @@ async function Log() {
   await db.set("log", log);
 }
 
+
 function clearLog() {
-  db.delete("log").then(() => {
+  db.set("log", []).then(() => {
     console.clear();
     log = [];
   })
@@ -123,13 +124,15 @@ function generateId() {
 function valueToString(v, nf) { //for log
   let str = "";
   if (typeof v === "function") {
-    str = "<span style='color:purple;'>"+v.toString()+"</span>";
+    str = `<span style='color:purple;'>${v.toString()}</span>`;
   } else if (Array.isArray(v)) {
     str = "<span style='color:red;'>[";
     for (let i = 0; i < v.length; i++) {
       str += valueToString(v[i], true) + ", ";
     }
-    if (v.length) str = str.substring(0, str.length - 2); //remove trailing ", "
+    if (v.length) {
+      str = str.substring(0, str.length - 2); //remove trailing ", "
+    }
     str += "]</span>";
   } else if (typeof v === "object") {
     str = "<span style='color:red;'>{";
@@ -138,13 +141,19 @@ function valueToString(v, nf) { //for log
       str += "<span style='color:blue;'>" + key + "</span>: " + valueToString(value, true) + ", ";
       hasTrailing = true;
     }
-    if (hasTrailing) str = str.substring(0, str.length - 2); //remove trailing ", "
+
+    if (hasTrailing) {
+      str = str.substring(0, str.length - 2); //remove trailing ", "
+    }
     str += "}</span>";
   } else if (typeof v === "number") {
-    str = "<span style='color:orange;'>"+v.toString()+"</span>";
+    str = `<span style='color:orange;'>${v.toString()}</span>`
   } else if (typeof v === "string") {
     if (v.startsWith("MineKhan")) {
-      v = v.replace("MineKhan","<span style='background:yellow;'>MineKhan</span>");
+      v = v.replace(/&/g, "&amp;");
+      v = v.replace(/</g, "&lt;");
+      v = v.replace(/>/g, "&gt;");
+      v = v.replace("MineKhan", "<span style='background:yellow;'>MineKhan</span>");
     }
     if (v.startsWith("New comment")) {
       v = v.replace("comment","<span style='background:orange;'>comment</span>");
@@ -153,7 +162,7 @@ function valueToString(v, nf) { //for log
       v = v.replace("post","<span style='background:orange;'>post</span>");
     }
 
-    v = v.replace(/(changed their bio|changed their skin)/, "<span style='background:lightgreen;'>$1</span>")
+    v = v.replace(/(changed their bio|changed their skin)/, "<span style='background:lightgreen;'>$1</span>");
     
     v = v.replace(/%>/g, "<b style='color:orange; margin-right:15px;'>&gt;</b>");
     v = v.replace(/%</g, "<b style='color:orange; margin-right:15px;'>&nbsp;</b>"); //⋖
@@ -166,20 +175,21 @@ function valueToString(v, nf) { //for log
   return str;
 }
 
-router.get('/', function(req, res) {
+router.get('/', function (req, res) {
   res.sendFile(path.join(__dirname, "/info.html"));
 });
 
 router.get('/test', function (req, res) {
   res.send("test");
 });
+
 router.get('/log', async (req, res) => {
   const options = url.parse(req.url, true).query;
   const log = await db.get("log");
-  if (!log) {
+  if (!log || !log.length) {
     return res.send("Empty");
   }
-  let str = "<style>#logContent>span{max-width:100%;text-overflow:ellipsis;white-space:nowrap;display:inline-block;overflow:hidden;}</style><div id='logContent' style='font-family:monospace;'>";
+  let str = "<style>#logContent>span{max-width:100%;text-overflow:ellipsis;white-space:nowrap;display:inline-block;overflow:hidden;}</style><div id='logContent' style='font-family:monospace;'>"
   log.forEach(v => {
     if (options.nominekhan && v[0].startsWith("MineKhan: ")) {
       return;
@@ -258,13 +268,13 @@ function logout(request, res){
   })
 }
 
-async function validate(request, response, next) {
+const validate = async(request, response, next) => {
   const sid = request.cookies ? request.cookies.sid : null;
   if (sid) {
     await db.get("session:" + sid)
       .then(async (result) => {
         if (!result) {
-          return;
+          return next();
         }
         request.username = result.username
         db.get("user:" +  request.username).then(u => {
@@ -953,6 +963,14 @@ function promoteToAdmin(username){
     r.admin = true
     addNotif("You have been promoted to admin", r)
     db.set("user:" + username, r).then(() => console.log("done"))
+  })
+}
+function unpromoteFromAdmin(username){
+  db.get("user:"+username).then(r =>{
+    if(!r) return console.log("user doesn't exsist")
+    r.admin = false
+    addNotif("You have been unpromoted from admin",r)
+    db.set("user:"+username, r).then(() => console.log("done"))
   })
 }
 
