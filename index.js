@@ -36,6 +36,13 @@ const nodemailer = require('nodemailer');
 const requestIp = require('request-ip');
 app.use(requestIp.mw())
 
+var keysThisHour = 0
+function updateKeysThisHour(){
+  db.list().then(m => keysThisHour = m.length)
+}
+updateKeysThisHour()
+setInterval(updateKeysThisHour, 1000*60*60)
+
 let log = []
 async function Log(){
   var data = []
@@ -183,6 +190,15 @@ router.get('/log', async(req,res) => {
 })*/
 router.get("/panorama", (req,res) => {
   res.redirect("https://data.thingmaker.repl.co/images/panorama/2022.png")
+})
+
+router.get("/common.js", (req,res) => {
+  var str = ""
+  if(keysThisHour > 4900){
+    str += "addBanner('Server low on or out of space. Please delete unused accounts.')"
+  }
+  res.header("Content-Type", "application/javascript")
+  res.send(str)
 })
 
 app.use(express.static('public'))
