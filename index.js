@@ -195,7 +195,7 @@ router.get("/panorama", (req,res) => {
 router.get("/common.js", (req,res) => {
   var str = ""
   if(keysThisHour > 4900){
-    str += "addBanner('Server low on or out of space. Please delete unused accounts.')"
+    str += "addBanner('Server low on or out of space. Please delete unused accounts to allow other users to create accounts and login.')"
   }
   res.header("Content-Type", "application/javascript")
   res.send(str)
@@ -1211,7 +1211,7 @@ minekhanWs.onrequest = function(request, connection, urlData) {
       }))
     }else if(data.type === "init"){
       world.name = data.name
-      Log("MineKhan: Server opened: "+world.name, worlds.length+" worlds")
+      Log("MineKhan: "+connection.username+" opened server: "+world.name, worlds.length+" worlds")
     }else if(data.type === "pong"){
       var p = worlds.pings[world.id]
       if(p){
@@ -1314,7 +1314,7 @@ minekhanWs.onrequest = function(request, connection, urlData) {
       closePlayers()
       worlds.splice(worlds.indexOf(world), 1)
       world = {}
-      Log("MineKhan: Server closed: "+name+" with "+playerAmount+" people", worlds.length+" worlds")
+      Log("MineKhan: "+connection.username+" closed server: "+name+" with "+playerAmount+" people", worlds.length+" worlds")
     }else{
       sendPlayers(JSON.stringify({
         type:"dc",
