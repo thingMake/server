@@ -194,8 +194,8 @@ router.get("/panorama", (req,res) => {
 
 router.get("/common.js", (req,res) => {
   var str = ""
-  if(keysThisHour > 4900){
-    str += "addBanner('Server low on or out of space. Please delete unused accounts to allow other users to create accounts and login.')"
+  if(keysThisHour > 4950){
+    str += "addBanner('Server low on or out of space. Please delete unused accounts and posts to allow other users to create accounts and login.')"
   }
   res.header("Content-Type", "application/javascript")
   res.send(str)
