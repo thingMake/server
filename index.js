@@ -1271,7 +1271,7 @@ minekhanWs.onrequest = function(request, connection, urlData) {
       sendPlayer(JSON.stringify({
         type:"message",
         username:"Server",
-        data:arr.join(", "),
+        data:arr.length + " players online: " + arr.join(", "),
         fromServer:true
       }), data.FROM)
     }else if(data.type === "eval"){
