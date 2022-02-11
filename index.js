@@ -875,21 +875,7 @@ router.get("/sessions", (req, res) => {
 
 //for minekhan
 router.get("/worlds", (req, res) => {
-  var data = []
-  for(var i=0; i<worlds.length; i++){
-    var w = worlds[i]
-    data.push({
-      name: w.name,
-      players: (() => {
-        var ps = []
-        w.players.forEach(r => ps.push(r.username))
-        return ps
-      })(),
-      id: w.id,
-      host: w.host.username
-    })
-  }
-  res.json(data)
+  res.json(worlds.toRes())
 })
 router.get("/worldsPing", (req, res) => {
   var w = []
@@ -1055,6 +1041,23 @@ worlds.find = (id) => {
     }
   }
 }
+worlds.toRes = function(){
+  var data = []
+  for(var i=0; i<worlds.length; i++){
+    var w = worlds[i]
+    data.push({
+      name: w.name,
+      players: (() => {
+        var ps = []
+        w.players.forEach(r => ps.push(r.username))
+        return ps
+      })(),
+      id: w.id,
+      host: w.host.username
+    })
+  }
+  return data
+}
 worlds.pings = {}
 async function pingWorld(id){
   var w = worlds.find(id)
@@ -1212,6 +1215,7 @@ minekhanWs.onrequest = function(request, connection, urlData) {
     }else if(data.type === "init"){
       world.name = data.name
       Log("MineKhan: "+connection.username+" opened server: "+world.name, worlds.length+" worlds")
+      worldsChanged()
     }else if(data.type === "pong"){
       var p = worlds.pings[world.id]
       if(p){
@@ -1329,11 +1333,16 @@ minekhanWs.onrequest = function(request, connection, urlData) {
       Log("MineKhan: "+world.players[idx].username+" left the server: "+world.name)
       world.players.splice(idx, 1)
     }
+    worldsChanged()
   });
   connection.on("error", function(err){
     console.log("UH OH!!! Websocket error", err)
   })
+  worldsChanged()
 };
+function worldsChanged(){
+  sendWorlds()
+}
 
 var postWs = new WebSocketRoom("/postWs")
 postWs.onrequest = function(req, connection, urlData){
@@ -1350,6 +1359,18 @@ function sendPostWs(obj, id, fromUserId){
   for(var i=0; i<postWs.connections.length; i++){
     var con = postWs.connections[i]
     if(con.postId === id && fromUserId !== con.userId) con.sendUTF(str)
+  }
+}
+
+var worldsWs = new WebSocketRoom("/worlds")
+worldsWs.onrequest = function(request,connection){
+  connection.sendUTF(JSON.stringify(worlds.toRes()))
+}
+function sendWorlds(){
+  var str = JSON.stringify(worlds.toRes())
+  for(var i=0; i<worldsWs.connections.length; i++){
+    var con = worldsWs.connections[i]
+    con.sendUTF(str)
   }
 }
 
