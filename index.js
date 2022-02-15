@@ -1021,6 +1021,7 @@ minekhanWs.validateFunc = async (request, options) => {
   if(sid) {
     return await db.get("session:"+sid)
       .then(async result => {
+        if(!result) return false
         if(await db.get("user:"+result.username).then(u => {
           if(u) request.isAdmin = u.admin || false
           else return true
@@ -1365,6 +1366,12 @@ function sendPostWs(obj, id, fromUserId){
 var worldsWs = new WebSocketRoom("/worlds")
 worldsWs.onrequest = function(request,connection){
   connection.sendUTF(JSON.stringify(worlds.toRes()))
+  connection.on("message",function(message){
+    var data = message.utf8Data
+    if(data === "get"){
+      connection.sendUTF(JSON.stringify(worlds.toRes()))
+    }
+  })
 }
 function sendWorlds(){
   var str = JSON.stringify(worlds.toRes())
