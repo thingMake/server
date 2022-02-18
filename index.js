@@ -20,9 +20,9 @@ app.use(cors({
   },
   credentials: true, // <= Accept credentials (cookies) sent by the client
 }))
-const Database = require("@replit/database");
-const db = new Database()
-const db2 = require("./db.js")
+//const Database = require("@replit/database");
+//const db = new Database()
+const db = require("./db.js")
 const bcrypt = require('bcrypt')
 const WebSocketServer = require('websocket').server;
 const url = require('url');
