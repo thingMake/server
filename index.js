@@ -194,7 +194,7 @@ router.get("/panorama", (req,res) => {
 
 router.get("/common.js", (req,res) => {
   var str = ""
-  if(keysThisHour > 4950){
+  if(keysThisHour > Infinity){
     str += "addBanner('Server low on or out of space. Please delete unused accounts and posts to allow other users to create accounts and login.')"
   }
   res.header("Content-Type", "application/javascript")
@@ -1120,6 +1120,14 @@ minekhanWs.onrequest = function(request, connection, urlData) {
   if(world){
     world.players.push(connection)
   }else{
+    if(worlds.length >= 5){
+      connection.sendUTF(JSON.stringify({
+        type:"error",
+        data:"Only 5 servers at a time"
+      }))
+      connection.close()
+      return
+    }
     world = {
       id: target,
       players: [connection],
