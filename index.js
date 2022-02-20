@@ -613,7 +613,7 @@ router.post("/post", validate, async(request, response) => {
         data:blog,
         redirect: "/website/post.html?id="+uniqueId
       })
-      Log("New post", blog.title)
+      Log("New post", "<a href='/website/post.html?id="+blog.id+"' target='_blank'>"+blog.title+"</a>")
     })
     .catch((e) => response.status(500).json({message:e}))
 })
@@ -742,7 +742,7 @@ router.post("/commentPost/*", validate, async(req, res) => {
         type:"comment",
         data:commentData
       }, id, req.body.userId)
-      Log("New comment at", r.title)
+      Log("New comment at", "<a href='/website/post.html?id="+r.id+"#comment"+cid+"' target='_blank'>"+r.title+"</a>")
     })
   }).catch(() => {
     res.json({message:"Post doesn't exsist"})
