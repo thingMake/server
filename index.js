@@ -5,7 +5,7 @@ LogAllOut, promoteToAdmin, deleteAccount, banFromMineKhan, unbanFromMineKhan, un
 
 //Variables
 var multiplayerOn = true
-var multiplayerMsg = "No, No!" //message when multiplayer is off
+var multiplayerMsg = "Multiplayer will be back soon." //message when multiplayer is off
 
 const express = require('express');
 const app = express();
@@ -826,16 +826,17 @@ router.post("/resetPwd", async (req,res) => {
   await getPostData(req)
   var username = req.body.username
   db.get("user:"+username).then(r => {
-    if(!r) return res.json({message:"That account doesn;t exsist."})
+    if(!r) return res.json({message:"That account doesn't exsist."})
     var email = r.email || ""
     if(!email){
       return res.json({message:"Sorry, that account doesn't have an email."})
     }
     var transport = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 2525,
+      /*host: "smtp.gmail.com",
+      port: 2525,*/
+      service:"gmail",
       auth: {
-        user: "aarontao950@gmail.com",
+        user: "minekhanteam@gmail.com",
         pass: process.env['gmail_pass']
       }
     });
