@@ -1267,7 +1267,7 @@ minekhanWs.onrequest = function(request, connection, urlData) {
       }
       sendPlayerName(JSON.stringify({
         type:"error",
-        data: data.reason ? "You've been banned from this world.\n\nReason:\n"+data.reason : "You've been banned from this world."
+        data: "You've been banned from this world." + (data.reason ? "\n\n\n\n\nReason:\n"+data.reason : "")
       }), data.data)
       sendPlayers(JSON.stringify({
         type:"message",
