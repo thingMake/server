@@ -4,8 +4,8 @@ LogAllOut, promoteToAdmin, deleteAccount, banFromMineKhan, unbanFromMineKhan, un
 */
 
 //Variables
-var multiplayerOn = true
-var multiplayerMsg = "Multiplayer will be back soon." //message when multiplayer is off
+var multiplayerOn = false
+var multiplayerMsg = "Multiplayer disabled." //message when multiplayer is off
 
 const express = require('express');
 const app = express();
@@ -35,6 +35,9 @@ cloudinary.config({
 const nodemailer = require('nodemailer');
 const requestIp = require('request-ip');
 app.use(requestIp.mw())
+const Transform = require('stream').Transform;
+const newLineStream = require('new-line');
+const fs = require("fs")
 
 var keysThisHour = 0
 function updateKeysThisHour(){
@@ -254,6 +257,7 @@ function logout(request, res){
     }).catch(e => {Log(e)})
   })
 }
+
 const validate = async(request, response, next) => {
   var sid = request.cookies ? request.cookies.sid : null
   if(sid) {
@@ -446,6 +450,36 @@ router.delete("/deleteAccount", validate, async (request, response) => {
 router.get("/logout", async (request, response) => {
   await logout(request, response)
   response.send("Your'e logged out")
+})
+router.get("/getSession", async (req,res) => {
+  var sid = req.cookies ? req.cookies.sid : null
+  var s
+  if(sid){
+    s = await db.get("session:"+sid)
+  }
+  if(s){
+    s = s.id
+  }else{
+    s = null
+  }
+  
+  var parser = new Transform({
+    transform(data, encoding, done) {
+      const str = data.toString().replace('SESSION', s);
+      this.push(str);
+      done();
+    }
+  })
+
+  res.header("Content-Type","text/html")
+  
+  fs.createReadStream(__dirname+'/getSession.html')
+    .pipe(newLineStream())
+    .pipe(parser)
+    .on("error",e => {
+      console.error(e)
+    })
+    .pipe(res);
 })
 router.get("/account/*", async (request, response) => {
   let username = request.url.split("/").pop()

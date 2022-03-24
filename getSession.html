@@ -1,0 +1,14 @@
+<!doctpye html>
+<title>Getting session...</title>
+<script>
+  const urlParams = new URLSearchParams(location.search)
+  var redirect = urlParams.get("redirect")
+  
+  var sid = SESSION
+  redirect += "#"+sid
+  if(sid){
+    location.replace(redirect)
+  }else{
+    location.replace("https://www.thingmaker.repl.co/website/login.html?redirect="+encodeURIComponent(location.href))
+  }
+</script>
