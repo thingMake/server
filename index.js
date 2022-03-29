@@ -4,7 +4,7 @@ LogAllOut, promoteToAdmin, deleteAccount, banFromMineKhan, unbanFromMineKhan, un
 */
 
 //Variables
-var multiplayerOn = false
+var multiplayerOn = true
 var multiplayerMsg = "Multiplayer disabled." //message when multiplayer is off
 
 const express = require('express');
@@ -198,8 +198,9 @@ router.get("/panorama", (req,res) => {
 router.get("/common.js", (req,res) => {
   var str = ""
   if(keysThisHour > Infinity){
-    str += "addBanner('Server low on or out of space. Please delete unused accounts and posts to allow other users to create accounts and login.')"
+    str += "addBanner('Server low on or out of space. Please delete unused accounts and posts to allow other users to create accounts and login.');"
   }
+  str += "addBanner('MineKhan will be updated to version Alpha 1.0.5 at April 1!!! (may be delayed)');"
   res.header("Content-Type", "application/javascript")
   res.send(str)
 })
