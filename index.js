@@ -150,7 +150,7 @@ function valueToString(v, nf){ //for log
     if(v.startsWith("New comment")){
       v = v.replace("comment","<span style='background:orange;'>comment</span>")
     }
-    if(v.startsWith("New post")){
+    if(v.startsWith("New post") || v.startsWith("Edited post")){
       v = v.replace("post","<span style='background:orange;'>post</span>")
     }
     v = v.replace(/(changed their bio|changed their skin)/, "<span style='background:lightgreen;'>$1</span>")
@@ -679,6 +679,29 @@ router.delete("/deletePost/*", validate, async(req, res) => {
     res.send("ok")
     Log("Deleted post", title)
   }).catch(e => {res.send("error"); console.log(e)})
+})
+router.post("/editPost/*", validate, async(req, res) => {
+  let id = req.url.split("/").pop()
+  if(!req.username){
+    return response.status(401).json({message:"You need to login to edit your posts. Login is at the top right."})
+  }
+  await getPostData(req)
+  var post = await db.get("post:"+id)
+  if(!post) return res.json({message:"post does not exist"})
+
+  var user = await db.get("user:"+req.username)
+  var canEdit = false
+  if(post.username === req.username) canEdit = true
+  if(user.admin) canEdit = true
+  if(!canEdit) return res.json({message:"You do not have permission to edit this post."})
+  
+  if(!req.body.content) return res.json({message:"You need content for the post."})
+  if(req.body.content === post.content) return res.json({message:"You did not change the content."})
+
+  post.content = req.body.content
+  await db.set("post:"+id, post)
+  res.json({success:true})
+  Log("Edited post <a href='/website/post.html?id="+id+"' target='_blank'>"+post.title+"</a>.")
 })
 //get a post by its id
 router.get("/post/*", (request, res) => {
