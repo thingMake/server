@@ -200,7 +200,7 @@ router.get("/common.js", (req,res) => {
   if(keysThisHour > Infinity){
     str += "addBanner('Server low on or out of space. Please delete unused accounts and posts to allow other users to create accounts and login.');"
   }
-  str += "addBanner('MineKhan will be updated to version Alpha 1.0.5 at April 1!!! (may be delayed)');"
+  str += "addBanner('MineKhan will be updated to version Alpha 1.0.5 at April 1!!! The update will add more redstone components!!! (may be delayed)');"
   res.header("Content-Type", "application/javascript")
   res.send(str)
 })
@@ -701,7 +701,7 @@ router.post("/editPost/*", validate, async(req, res) => {
   post.content = req.body.content
   await db.set("post:"+id, post)
   res.json({success:true})
-  Log("Edited post <a href='/website/post.html?id="+id+"' target='_blank'>"+post.title+"</a>.")
+  Log("Edited post <a href='/website/post.html?id="+id+"' target='_blank'>"+post.title+"</a>")
 })
 //get a post by its id
 router.get("/post/*", (request, res) => {
