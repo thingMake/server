@@ -1112,7 +1112,8 @@ worlds.toRes = function(){
         return ps
       })(),
       id: w.id,
-      host: w.host.username
+      host: w.host.username,
+      banned: w.banned
     })
   }
   return data
@@ -1189,6 +1190,7 @@ minekhanWs.onrequest = function(request, connection, urlData) {
     world = {
       id: target,
       players: [connection],
+      banned: {},
       host: connection,
       name: "Ghost server "+target
     }
@@ -1243,6 +1245,9 @@ minekhanWs.onrequest = function(request, connection, urlData) {
       }
     }
   }
+  function closeThisPlayer(){
+    connection.close()
+  }
   function findPlayer(id){
     for(var i=0; i<world.players.length; i++){
       var p = world.players[i]
@@ -1261,6 +1266,27 @@ minekhanWs.onrequest = function(request, connection, urlData) {
         }))
         connection.close()
         return
+      }
+
+      if(data.username in world.banned){
+        if(connection.isAdmin){
+          delete world.banned[data.username]
+        }else{
+          var b = world.banned[data.username]
+          sendThisPlayer(JSON.stringify({
+            type:"error",
+            data: "You've been banned from this world." + (b ? "\n\n\n\n\nReason:\n"+b : "")
+          }))
+          sendAllPlayers(JSON.stringify({
+            type:"message",
+            username:"Server",
+            data:data.username+" was banned and tried to join ",
+            fromServer:true
+          }))
+          Log("MineKhan: "+data.username+" was banned but tried to join "+world.name)
+          closeThisPlayer()
+          return
+        }
       }
 
       connection.id = data.id
@@ -1306,6 +1332,13 @@ minekhanWs.onrequest = function(request, connection, urlData) {
         type:"diamondsToYou"
       }), data.TO)
     }else if(data.type === "ban"){
+      if(!(connection === world.host || connection.isAdmin)) return sendThisPlayer(JSON.stringify({
+          type:"message",
+          username:"Server",
+          data:"You dont have permission to ban.",
+          fromServer:true
+        }))
+      
       var banWho = findPlayer(data.data)
       if(banWho && banWho.isAdmin){
         sendPlayer(JSON.stringify({
@@ -1322,11 +1355,23 @@ minekhanWs.onrequest = function(request, connection, urlData) {
         }))
         return
       }
+
+      if(data.data in world.banned){
+        return sendThisPlayer(JSON.stringify({
+          type:"message",
+          username:"Server",
+          data:data.data+" is already banned.",
+          isServer:true
+        }))
+      }else{
+        world.banned[data.data] = data.reason || ""
+      }
+      
       sendPlayerName(JSON.stringify({
         type:"error",
         data: "You've been banned from this world." + (data.reason ? "\n\n\n\n\nReason:\n"+data.reason : "")
       }), data.data)
-      sendPlayers(JSON.stringify({
+      sendAllPlayers(JSON.stringify({
         type:"message",
         username:"Server",
         data:data.data+" got banned.",
@@ -1334,6 +1379,30 @@ minekhanWs.onrequest = function(request, connection, urlData) {
       }))
       Log("MineKhan: "+data.data+" got banned from the server: "+world.name)
       closePlayer(data.data)
+    }else if(data.type === "unban"){
+      if(!(connection === world.host || connection.isAdmin)) return sendThisPlayer(JSON.stringify({
+          type:"message",
+          username:"Server",
+          data:"You dont have permission to unban.",
+          fromServer:true
+        }))
+      
+      if(!(data.data in world.banned)){
+        return sendThisPlayer(JSON.stringify({
+          type:"message",
+          username:"Server",
+          data:data.data+" is not banned.",
+          fromServer:true
+        }))
+      }
+      delete world.banned[data.data]
+      sendAllPlayers(JSON.stringify({
+        type:"message",
+        username:"Server",
+        data:data.data+" got unbanned.",
+        fromServer:true
+      }))
+      Log("MineKhan: "+data.data+" got unbanned from the server: "+world.name)
     }else if(data.type === "fetchUsers"){
       var arr = []
       world.players.forEach(u => {
