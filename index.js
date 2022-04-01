@@ -200,7 +200,6 @@ router.get("/common.js", (req,res) => {
   if(keysThisHour > Infinity){
     str += "addBanner('Server low on or out of space. Please delete unused accounts and posts to allow other users to create accounts and login.');"
   }
-  str += "addBanner('MineKhan will be updated to version Alpha 1.0.5 at April 1!!! The update will add more redstone components!!! (may be delayed)');"
   res.header("Content-Type", "application/javascript")
   res.send(str)
 })
