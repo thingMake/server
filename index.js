@@ -192,7 +192,7 @@ router.get('/log', async(req,res) => {
   res.sendFile(__dirname+"/pfp.png")
 })*/
 router.get("/panorama", (req,res) => {
-  res.redirect("https://data.thingmaker.repl.co/images/panorama/2022.png")
+  res.redirect("https://data.thingmaker.repl.co/images/panorama/redstone.png")
 })
 
 router.get("/common.js", (req,res) => {
