@@ -82,11 +82,16 @@ db.get("bannedFromMineKhan").then(r => {
     bannedFromMineKhan = []
   }
 })
-function banFromMineKhan(who){
+function banFromMineKhan(who, noIp){
+  if(bannedFromMineKhan.includes("who")) return console.log(who+" is already banned.")
   db.get("user:"+who).then(r => {
     if(!r) return console.log(who+" doesn't exsist")
     bannedFromMineKhan.push(who)
-    if(r.ip) bannedFromMineKhan.push(...r.ip)
+    if(!noIp && r.ip) {
+      for(var ip of r.ip){
+        if(!bannedFromMineKhan.includes(ip)) bannedFromMineKhan.push(ip)
+      }
+    }
     db.set("bannedFromMineKhan", bannedFromMineKhan).then(() => console.log("done"))
   })
 }
