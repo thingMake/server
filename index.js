@@ -1262,7 +1262,12 @@ minekhanWs.onrequest = function(request, connection, urlData) {
     }
   }
   connection.on('message', function(message) {
-    var data = JSON.parse(message.utf8Data)
+    var data
+    try{
+      data = JSON.parse(message.utf8Data)
+    }catch{
+      return
+    }
     if(data.type === "connect"){
       if(bannedFromMineKhan.includes(data.username)){
         sendThisPlayer(JSON.stringify({
