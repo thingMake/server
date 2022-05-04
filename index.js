@@ -181,7 +181,7 @@ router.get('/log', async(req,res) => {
   if(!log || !log.length) return res.send("Empty")
   var str = "<style>#logContent>span{max-width:100%;text-overflow:ellipsis;white-space:nowrap;display:inline-block;overflow:hidden;}</style><div id='logContent' style='font-family:monospace;'>"
   log.forEach(v => {
-    if(options.nominekhan && v[0].startsWith("MineKhan: ")) return
+    if(options.nominekhan && typeof v[0] === "string" && v[0].startsWith("MineKhan: ")) return
     str += "<span>"
     v.forEach(r => {
       str += valueToString(r)+" "
@@ -1118,7 +1118,8 @@ worlds.toRes = function(){
       })(),
       id: w.id,
       host: w.host.username,
-      banned: w.banned
+      banned: w.banned,
+      whitelist: w.whitelist
     })
   }
   return data
@@ -1196,6 +1197,7 @@ minekhanWs.onrequest = function(request, connection, urlData) {
       id: target,
       players: [connection],
       banned: {},
+      whitelist: null,
       host: connection,
       name: "Ghost server "+target
     }
@@ -1297,6 +1299,14 @@ minekhanWs.onrequest = function(request, connection, urlData) {
           closeThisPlayer()
           return
         }
+      }
+      if(world.whitelist && !world.whitelist.includes(data.username) && !connection.isAdmin){
+        sendThisPlayer(JSON.stringify({
+          type:"error",
+          data: "You have not been whitelisted on this server."
+        }))
+        closePlayer()
+        return
       }
 
       connection.id = data.id
@@ -1418,15 +1428,52 @@ minekhanWs.onrequest = function(request, connection, urlData) {
         fromServer:true
       }))
       Log("MineKhan: "+data.data+" got unbanned from the server: "+world.name)
+    }else if(data.type === "whitelist"){
+      if(!(connection === world.host || connection.isAdmin)) return sendThisPlayer(JSON.stringify({
+          type:"message",
+          username:"Server",
+          data:"You dont have permission to edit whitelist.",
+          fromServer:true
+        }))
+
+      if((data.data === "add" || data.data === "remove") && !world.whitelist) return sendThisPlayer(JSON.stringify({
+          type:"message",
+          data: "You need to enable whitelist to do that.",
+          username: "Server",
+          fromServer:true
+        }))
+      
+      if(data.data === "enable" && !world.whitelist) world.whitelist = []
+      else if(data.data === "disable" && world.whitelist) world.whitelist = null
+      else if(data.data === "add" && !world.whitelist.includes(data.who)){
+        world.whitelist.push(data.who)
+      }else if(data.data === "remove" && world.whitelist.includes(data.who)){
+        world.whitelist.splice(world.whitelist.indexOf(data.who), 1)
+      }
     }else if(data.type === "fetchUsers"){
-      var arr = []
-      world.players.forEach(u => {
-        arr.push(u.username)
-      })
+      var str = world.players.length + " players online: "
+      world.players.forEach(u => str += u.username+", ")
+      str = str.slice(0,str.length-2)
+
+      var bannedLength = 0
+      for(var b in world.banned) bannedLength ++
+      if(bannedLength){
+        str += "<br>"
+        str += bannedLength + " people banned: "
+        for(var b in world.banned) str += b + ", "
+        str = str.slice(0,str.length-2)
+      }
+      if(world.whitelist && world.whitelist.length){
+        str += "<br>"
+        str += world.whitelist.length + " people whitelisted: "
+        world.whitelist.forEach(u => str += u + ", ")
+        str = str.slice(0,str.length-2)
+      }
+      
       sendPlayer(JSON.stringify({
         type:"message",
         username:"Server",
-        data:arr.length + " players online: " + arr.join(", "),
+        data:str,
         fromServer:true
       }), data.FROM)
     }else if(data.type === "eval"){
