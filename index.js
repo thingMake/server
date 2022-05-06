@@ -7,6 +7,10 @@ LogAllOut, promoteToAdmin, deleteAccount, banFromMineKhan, unbanFromMineKhan, un
 var multiplayerOn = true
 var multiplayerMsg = "Multiplayer disabled." //message when multiplayer is off
 
+process.on('unhandledRejection', (reason, p) => {
+  console.error('Unhandled Rejection at: Promise', p, 'reason:', reason);
+});
+
 const express = require('express');
 const app = express();
 var cookieParser = require('cookie-parser');
@@ -1086,7 +1090,7 @@ minekhanWs.validateFunc = async (request, options) => {
       .then(async result => {
         if(!result) return false
         if(await db.get("user:"+result.username).then(u => {
-          if(u) request.isAdmin = u.admin || false
+          if(u) request.isAdmin = u.admin || false, request.username = u.username
           else return true
         })){
           return false
@@ -1179,6 +1183,7 @@ minekhanWs.onrequest = function(request, connection, urlData) {
   
   Log("MineKhan: Client connected: ", queryObject)
   connection.isAdmin = request.isAdmin
+  var username = connection.username = request.username
 
   //add user to a world
   var world = worlds.find(target)
@@ -1271,7 +1276,7 @@ minekhanWs.onrequest = function(request, connection, urlData) {
       return
     }
     if(data.type === "connect"){
-      if(bannedFromMineKhan.includes(data.username)){
+      if(bannedFromMineKhan.includes(username)){
         sendThisPlayer(JSON.stringify({
           type:"error",
           data:"You are banned from MineKhan."
@@ -1280,11 +1285,11 @@ minekhanWs.onrequest = function(request, connection, urlData) {
         return
       }
 
-      if(data.username in world.banned){
+      if(username in world.banned){
         if(connection.isAdmin){
-          delete world.banned[data.username]
+          delete world.banned[username]
         }else{
-          var b = world.banned[data.username]
+          var b = world.banned[username]
           sendThisPlayer(JSON.stringify({
             type:"error",
             data: "You've been banned from this world." + (b ? "\n\n\n\n\nReason:\n"+b : "")
@@ -1292,15 +1297,15 @@ minekhanWs.onrequest = function(request, connection, urlData) {
           sendAllPlayers(JSON.stringify({
             type:"message",
             username:"Server",
-            data:data.username+" was banned and tried to join ",
+            data:username+" was banned and tried to join ",
             fromServer:true
           }))
-          Log("MineKhan: "+data.username+" was banned but tried to join "+world.name)
+          Log("MineKhan: "+username+" was banned but tried to join "+world.name)
           closeThisPlayer()
           return
         }
       }
-      if(world.whitelist && !world.whitelist.includes(data.username) && !connection.isAdmin){
+      if(world.whitelist && !world.whitelist.includes(username) && !connection.isAdmin){
         sendThisPlayer(JSON.stringify({
           type:"error",
           data: "You have not been whitelisted on this server."
@@ -1310,24 +1315,24 @@ minekhanWs.onrequest = function(request, connection, urlData) {
       }
 
       connection.id = data.id
-      connection.username = data.username
+      //connection.username = data.username
       sendPlayers(JSON.stringify({
         type:"message",
-        data: data.username+" is connecting. "+world.players.length+" players now.",
+        data: username+" is connecting. "+world.players.length+" players now.",
         username: "Server",
         fromServer:true
       }))
-      Log("MineKhan: "+data.username+" joined the server: "+world.name)
+      Log("MineKhan: "+username+" joined the server: "+world.name)
     }else if(data.type === "joined"){
       sendPlayers(JSON.stringify({
         type:"message",
-        data: data.username+" joined. ",
+        data: username+" joined. ",
         username: "Server",
         fromServer:true
       }))
     }else if(data.type === "init"){
       world.name = data.name
-      Log("MineKhan: "+connection.username+" opened server: "+world.name, worlds.length+" worlds")
+      Log("MineKhan: "+username+" opened server: "+world.name, worlds.length+" worlds")
       worldsChanged()
     }else if(data.type === "pong"){
       var p = worlds.pings[world.id]
@@ -1516,7 +1521,7 @@ minekhanWs.onrequest = function(request, connection, urlData) {
       closePlayers()
       worlds.splice(worlds.indexOf(world), 1)
       world = {}
-      Log("MineKhan: "+connection.username+" closed server: "+name+" with "+playerAmount+" people", worlds.length+" worlds")
+      Log("MineKhan: "+username+" closed server: "+name+" with "+playerAmount+" people", worlds.length+" worlds")
     }else{
       sendPlayers(JSON.stringify({
         type:"dc",
