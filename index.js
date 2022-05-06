@@ -494,7 +494,12 @@ router.get("/account/*", async (request, response) => {
   let username = request.url.split("/").pop()
   try {
     await db.get("user:"+username)
-      .then((result) => response.json(result))
+      .then(result => {
+        delete result.ip
+        delete result.notifs
+        delete result.password
+        response.json(result)
+      })
       .catch((e) => response.status(500).send(e))
   } catch (e) {
     console.error(e.message)
