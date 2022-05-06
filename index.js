@@ -1344,9 +1344,15 @@ minekhanWs.onrequest = function(request, connection, urlData) {
       sendThisPlayer(JSON.stringify({
         type:"canSendPos"
       }))
-    }else if(data.type === "setBlock" || data.type === "getSave" || data.type === "message" || data.type === "entityPos" || data.type === "entityPosAll" || data.type === "entityDelete" || data.type === "die" || data.type === "harmEffect" || data.type === "achievment" ||  data.type === "playSound" || data.type === "mySkin" || data.type === "setTags"){
+    }else if(data.type === "message" || data.type === "die"){
+      data.username = username
+      sendPlayers(JSON.stringify(data))
+    }else if(data.type === "setBlock" || data.type === "getSave" || data.type === "entityPos" || data.type === "entityPosAll" || data.type === "entityDelete" || data.type === "harmEffect" || data.type === "achievment" ||  data.type === "playSound" || data.type === "mySkin" || data.type === "setTags"){
       sendPlayers(message.utf8Data)
-    }else if(data.type === "loadSave" || data.type === "hit"){
+    }else if(data.type === "hit"){
+      data.username = username
+      sendPlayer(JSON.stringify(data), data.TO)
+    }else if(data.type === "loadSave"){
       sendPlayer(message.utf8Data, data.TO)
     }else if(data.type === "kill"){
       if(data.data === "@a"){
