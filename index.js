@@ -1315,7 +1315,7 @@ minekhanWs.onrequest = function(request, connection, urlData) {
           type:"error",
           data: "You have not been whitelisted on this server."
         }))
-        closePlayer()
+        closeThisPlayer()
         return
       }
 
