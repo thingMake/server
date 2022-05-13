@@ -180,7 +180,8 @@ function valueToString(v, nf){ //for log
     if(v.startsWith("New post") || v.startsWith("Edited post")){
       v = v.replace("post","<span style='background:orange;'>post</span>")
     }
-    v = v.replace(/(changed their bio|changed their skin)/, "<span style='background:lightgreen;'>$1</span>")
+    v = v.replace(/(added cape|removed cape)/, "<span style='background:#88f;'>$1</span>")
+    v = v.replace(/(changed their bio|changed their skin|changed their cape)/, "<span style='background:lightgreen;'>$1</span>")
 
     v = v.replace(/%>/g, "<b style='color:orange; margin-right:15px;'>&gt;</b>")
     v = v.replace(/%</g, "<b style='color:orange; margin-right:15px;'>&nbsp;</b>")//⋖
@@ -591,8 +592,13 @@ router.post("/equipCape", validate, async(req,res) => {
   if(!req.username) return res.status(401).json({message:"Unauthorized"})
   await getPostData(req)
   var user = await db.get("user:"+req.username)
-  if(user.admin && !user.ownedCapes.includes(req.body.cape)) user.ownedCapes.push(req.body.cape)
-  if(user.ownedCapes.includes(req.body.cape)){
+  if(user.admin && req.body.cape && !user.ownedCapes.includes(req.body.cape)) user.ownedCapes.push(req.body.cape)
+  if(!req.body.cape){
+    delete user.cape
+    await db.set("user:"+req.username,user)
+    res.json({success:true})
+    Log(req.username+ " changed their cape.")
+  }else if(user.ownedCapes.includes(req.body.cape)){
     user.cape = capes[req.body.cape]
     await db.set("user:"+req.username,user)
     res.json({success:true})
