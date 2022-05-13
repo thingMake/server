@@ -1157,7 +1157,7 @@ minekhanWs.validateFunc = async (request, options) => {
         return result.username
       })
     if(!l) return false
-  }
+  }else return false
   
   if(!multiplayerOn && !d.includes(request.username)){
     options.send = JSON.stringify({
@@ -1167,7 +1167,7 @@ minekhanWs.validateFunc = async (request, options) => {
     return false
   }
   
-  return false
+  return true
 }
 
 var worlds = []
