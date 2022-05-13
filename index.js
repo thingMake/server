@@ -5,11 +5,13 @@ LogAllOut, promoteToAdmin, deleteAccount, banFromMineKhan, unbanFromMineKhan, un
 
 //Variables
 var multiplayerOn = true
-var multiplayerMsg = "Multiplayer disabled." //message when multiplayer is off
+var multiplayerMsg = "testing & stuff" //message when multiplayer is off
 
 process.on('unhandledRejection', (reason, p) => {
   console.error('Unhandled Rejection at: Promise', p, 'reason:', reason);
 });
+
+var d = ["2-people","2-people2"]
 
 const express = require('express');
 const app = express();
@@ -113,6 +115,22 @@ function unbanFromMineKhan(who){
     }
     db.set("bannedFromMineKhan", bannedFromMineKhan).then(() => console.log("done"))
   })
+}
+
+var capes = {}
+db.get("capes").then(r => {
+  if(r) capes = r
+})
+function saveCapes(){
+  return db.set("capes",capes) //return promise
+}
+async function giveCape(username, name){
+  await db.get("user:"+username).then(async u => {
+    u.ownedCapes = u.ownedCapes || []
+    u.ownedCapes.push(name)
+    await db.set("user:"+username, u)
+    console.log("done")
+  }).catch(e => Log(e))
 }
 
 /*var id = 0xf
@@ -560,6 +578,50 @@ router.post("/changeSkin", validate, async(req, res) => {
       Log(req.username+" changed their skin.")
     }).catch(e => res.json({message:e}))
   }).catch(e => res.json({message: e}))
+})
+
+router.get("/capes", (req,res) => {
+  res.json(capes)
+})
+router.get("/cape/*", (req,res) => {
+  let name = unescape(req.url.split("/").pop())
+  res.send(capes[name] || "null")
+})
+router.post("/equipCape", validate, async(req,res) => {
+  if(!req.username) return res.status(401).json({message:"Unauthorized"})
+  await getPostData(req)
+  var user = await db.get("user:"+req.username)
+  if(user.admin && !user.ownedCapes.includes(req.body.cape)) user.ownedCapes.push(req.body.cape)
+  if(user.ownedCapes.includes(req.body.cape)){
+    user.cape = capes[req.body.cape]
+    await db.set("user:"+req.username,user)
+    res.json({success:true})
+    Log(req.username+ " changed their cape.")
+  }else{
+    res.json({message:"you don't own it"})
+  }
+})
+router.post("/addCape", validate, async(req,res) => {
+  if(!req.username) return res.status(401).json({message:"Unauthorized"})
+  var user = await db.get("user:"+req.username)
+  if(!user.admin) return res.json({message:"no permission"})
+  await getPostData(req)
+  if(!req.body.name) return res.json({message:"It needs a name."})
+  capes[req.body.name] = req.body.url
+  await saveCapes()
+  res.json({success:true})
+  Log(req.username+" added cape "+req.body.name)
+})
+router.post("/removeCape", validate, async(req,res) => {
+  if(!req.username) return res.status(401).json({message:"Unauthorized"})
+  var user = await db.get("user:"+req.username)
+  if(!user.admin) return res.json({message:"no permission"})
+  await getPostData(req)
+  if(!capes[req.body.name]) return res.json({message:"invalid name"})
+  delete capes[req.body.name]
+  await saveCapes()
+  res.json({success:true})
+  Log(req.username+" removed cape "+req.body.name)
 })
 
 router.get("/deleteNotifs", validate, (req,res) => {
@@ -1066,14 +1128,6 @@ const minekhanWs = new WebSocketRoom("/ws");
 
 //Function to validate request
 minekhanWs.validateFunc = async (request, options) => {
-  if(!multiplayerOn){
-    options.send = JSON.stringify({
-      type:"error",
-      data:multiplayerMsg
-    })
-    return false
-  }
-
   if(request.origin !== "https://minekhan.thingmaker.repl.co"){
     return false
   }
@@ -1091,7 +1145,7 @@ minekhanWs.validateFunc = async (request, options) => {
     }
   }
   if(sid) {
-    return await db.get("session:"+sid)
+    var l = await db.get("session:"+sid)
       .then(async result => {
         if(!result) return false
         if(await db.get("user:"+result.username).then(u => {
@@ -1102,7 +1156,17 @@ minekhanWs.validateFunc = async (request, options) => {
         }
         return result.username
       })
+    if(!l) return false
   }
+  
+  if(!multiplayerOn && !d.includes(request.username)){
+    options.send = JSON.stringify({
+      type:"error",
+      data:multiplayerMsg
+    })
+    return false
+  }
+  
   return false
 }
 
