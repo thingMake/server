@@ -1,6 +1,12 @@
 /*
 Useful functions:
-LogAllOut, promoteToAdmin, deleteAccount, banFromMineKhan, unbanFromMineKhan, unpromoteFromAdmin
+LogAllOut()
+promoteToAdmin(username)
+deleteAccount(username)
+banFromMineKhan(username,don't ban ip)
+unbanFromMineKhan(username)
+unpromoteFromAdmin(username)
+giveCape(username,cape name)
 */
 
 //Variables
