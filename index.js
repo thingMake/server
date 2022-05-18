@@ -10,7 +10,7 @@ giveCape(username,cape name)
 */
 
 //Variables
-var multiplayerOn = true
+var multiplayerOn = false
 var multiplayerMsg = "testing & stuff" //message when multiplayer is off
 
 process.on('unhandledRejection', (reason, p) => {
@@ -591,7 +591,7 @@ router.get("/capes", (req,res) => {
   res.json(capes)
 })
 router.get("/cape/*", (req,res) => {
-  let name = unescape(req.url.split("/").pop())
+  let name = unescape(req.params[0])
   res.send(capes[name] || "null")
 })
 router.post("/equipCape", validate, async(req,res) => {
@@ -1017,6 +1017,68 @@ router.get("/sessions", (req, res) => {
   }else{
     res.sendFile(__dirname+"/401.html")
   }
+})
+
+//cloud saves
+router.get("/saves", validate, async(req,res) => {
+  if(!req.username) return res.status(401).json("Unauthorized")
+  var saves = await db.get("saves:"+req.username)
+  if(!saves) return res.json(null)
+  for(var i=0; i<saves.length; i++){
+    var s = saves[i]
+    saves[i] = {
+      edited:s.edited,
+      id:s.id,
+      name:s.name,
+      thumbnail:s.thumbnail,
+      version:s.version,
+      size:s.code ? s.code.length : 0
+    }
+  }
+  res.json(saves)
+})
+router.get("/saves/*", validate, async(req,res) => {
+  if(!req.username) return res.status(401).json("Unauthorized")
+  var saves = await db.get("saves:"+req.username)
+  if(!saves) return res.json(null)
+  let id = req.params[0]
+  for(var i=0; i<saves.length; i++){
+    var s = saves[i]
+    if(s.id.toString() === id) return res.json(s)
+  }
+  res.json(null)
+})
+router.post("/saves", validate, async(req,res) => {
+  if(!req.username) return res.status(401).json("Unauthorized")
+  await getPostData(req)
+  var save = req.body
+  if(!save || !save.id) res.json({message:"invalid save"})
+  var saves = await db.get("saves:"+req.username) || []
+  var found = false
+  for(var i=0; i<saves.length; i++){
+    if(saves[i].id.toString() === save.id){
+      saves[i] = save
+      found = true
+    }
+  }
+  if(!found) saves.push(save)
+  await db.set("saves:"+req.username, saves)
+  res.json({success:true})
+})
+router.delete("/saves/*", validate, async(req,res) => {
+  if(!req.username) return res.status(401).json("Unauthorized")
+  var saves = await db.get("saves:"+req.username)
+  if(!saves) return res.json({message:"save doesn't exist"})
+  let id = req.params[0]
+  for(var i=0; i<saves.length; i++){
+    var s = saves[i]
+    if(s.id.toString() === id){
+      saves.splice(i,1)
+      await db.set("saves:"+req.username, saves)
+      return res.json({success:true})
+    }
+  }
+  res.json({message:"save doesn't exist"})
 })
 
 //for minekhan
