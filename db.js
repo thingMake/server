@@ -41,7 +41,11 @@ module.exports = {
           return
         }
         if(values){
-          obj[data.key] = JSON.parse(data.value)
+          try{
+            obj[data.key] = JSON.parse(data.value)
+          }catch(e){
+            console.error("failed to parse",data.value,data.key,e)
+          }
         }else{
           obj.push(data.key)
         }

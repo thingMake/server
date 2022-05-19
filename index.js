@@ -10,7 +10,7 @@ giveCape(username,cape name)
 */
 
 //Variables
-var multiplayerOn = false
+var multiplayerOn = true
 var multiplayerMsg = "testing & stuff" //message when multiplayer is off
 
 process.on('unhandledRejection', (reason, p) => {
@@ -1017,6 +1017,17 @@ router.get("/sessions", (req, res) => {
   }else{
     res.sendFile(__dirname+"/401.html")
   }
+})
+router.get("/findEmail/*", async(req,res) => {
+  var search = req.params[0]
+  if(!search) return res.end()
+  var str = ""
+  var users = await db.list("user:",true)
+  for(var i in users){
+    var u = users[i]
+    if(u.email && u.email.includes(search)) str += i+": "+u.email+"<br>"
+  }
+  res.send(str)
 })
 
 //cloud saves
