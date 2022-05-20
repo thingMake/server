@@ -515,8 +515,9 @@ router.get("/getSession", async (req,res) => {
     })
     .pipe(res);
 })
-router.get("/account/*", async (request, response) => {
-  let username = request.url.split("/").pop()
+router.get("/account/*", async (request, response, next) => {
+  let username = request.params[0]
+  if(username.includes("/")) return next()
   try {
     await db.get("user:"+username)
       .then(result => {
@@ -1067,7 +1068,7 @@ router.post("/saves", validate, async(req,res) => {
   var saves = await db.get("saves:"+req.username) || []
   var found = false
   for(var i=0; i<saves.length; i++){
-    if(saves[i].id.toString() === save.id){
+    if(saves[i].id === save.id){
       saves[i] = save
       found = true
     }
@@ -1090,6 +1091,11 @@ router.delete("/saves/*", validate, async(req,res) => {
     }
   }
   res.json({message:"save doesn't exist"})
+})
+router.get("/account/*/saves", async(req,res) => {
+  let username = req.params[0]
+  var saves = await db.get("saves:"+username)
+  res.json(saves)
 })
 
 //for minekhan
