@@ -1368,36 +1368,40 @@ minekhanWs.onrequest = function(request, connection, urlData) {
     }
     worlds.push(world)
   }
+  connection.sendJSON = function(o){
+    if(typeof o === "object") o = JSON.stringify(o)
+    this.sendUTF(o)
+  }
   function sendPlayers(msg){
     for(var i=0; i<world.players.length; i++){
       var p = world.players[i]
       if(p !== connection){
-        p.sendUTF(msg)
+        p.sendJSON(msg)
       }
     }
   }
   function sendAllPlayers(msg){
     for(var i=0; i<world.players.length; i++){
       var p = world.players[i]
-      p.sendUTF(msg)
+      p.sendJSON(msg)
     }
   }
   function sendPlayer(msg, to){
     for(var i=0; i<world.players.length; i++){
       var p = world.players[i]
       if(p.id === to){
-        p.sendUTF(msg)
+        p.sendJSON(msg)
       }
     }
   }
   function sendThisPlayer(msg){
-    connection.sendUTF(msg)
+    connection.sendJSON(msg)
   }
   function sendPlayerName(msg, to){
     for(var i=0; i<world.players.length; i++){
       var p = world.players[i]
       if(p.username === to){
-        p.sendUTF(msg)
+        p.sendJSON(msg)
       }
     }
   }
@@ -1614,8 +1618,14 @@ minekhanWs.onrequest = function(request, connection, urlData) {
           fromServer:true
         }))
       
-      if(data.data === "enable" && !world.whitelist) world.whitelist = []
-      else if(data.data === "disable" && world.whitelist) world.whitelist = null
+      if(data.data === "enable" && !world.whitelist){
+        world.whitelist = []
+        sendPlayers({
+          type:"error",
+          data:"Whitelist has been enabled. You can rejoin if whitelisted.",
+        })
+        closePlayers()
+      }else if(data.data === "disable" && world.whitelist) world.whitelist = null
       else if(data.data === "add" && !world.whitelist.includes(data.who)){
         world.whitelist.push(data.who)
       }else if(data.data === "remove" && world.whitelist.includes(data.who)){
