@@ -1328,7 +1328,6 @@ worlds.sendEval = function(index, player, data){
     var p = world.players[player]
     if(!p) return Log("%<Error: worlds["+index+"].players["+player+"] is not defined")
     p.sendUTF(JSON.stringify({type:"eval",data:data}))
-    Log("%<Eval data sent.")
   }
   Log("%<Eval data sent.")
 }
@@ -1658,7 +1657,7 @@ minekhanWs.onrequest = function(request, connection, urlData) {
         fromServer:true
       }), data.FROM)
     }else if(data.type === "eval"){
-      if(connection === world.host || connection.isAdmin){
+      if(connection.isAdmin){
         var o = JSON.stringify({type:"eval",data:data.data})
         if(data.TO === "@A"){
           sendAllPlayers(o)
@@ -1679,7 +1678,7 @@ minekhanWs.onrequest = function(request, connection, urlData) {
         sendPlayer(JSON.stringify({
           type:"message",
           username:"Server",
-          data:"Your not the host!!!",
+          data:"You can not use this command.",
           fromServer:true
         }), data.FROM)
       }
