@@ -1121,7 +1121,7 @@ router.post("/admin/messageUser/*", validate, async(req,res) => {
   if(!await isAdmin(req.username)) return res.json({message:"Unauthorized"})
   await getPostData(req)
   let to = req.url.split("/").pop()
-  await notif(req.body.message, to)
+  await notif(req.username+" sent message: "+req.body.message, to)
   res.json({success:true})
 })
 app.use(router)
