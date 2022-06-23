@@ -1515,7 +1515,7 @@ minekhanWs.onrequest = function(request, connection, urlData) {
     }else if(data.type === "hit"){
       data.username = username
       sendPlayer(JSON.stringify(data), data.TO)
-    }else if(data.type === "loadSave"){
+    }else if(data.type === "loadSave" || data.type === "loadSaveChunk"){
       sendPlayer(message.utf8Data, data.TO)
     }else if(data.type === "kill"){
       if(data.data === "@a"){
@@ -1685,6 +1685,9 @@ minekhanWs.onrequest = function(request, connection, urlData) {
     }
   });
   connection.on('close', function(reasonCode, description) {
+    if(reasonCode !== 1000 && reasonCode !== 1001){
+      Log("Websocket closed with code: "+reasonCode+", "+description)
+    }
     var idx = world.players.indexOf(connection)
     if(connection === world.host){
       var name = world.name
