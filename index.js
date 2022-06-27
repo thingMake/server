@@ -1035,6 +1035,7 @@ router.get("/findSimilarUsers/*", async(req,res) => {
   var user = await db.get("user:"+search)
   if(!user) return res.send("invalid username")
   var ip = user.ip
+  if(!ip) return res.send("user has no ip")
   var users = await db.list("user:",true)
   userLoop:for(var i in users){
     var u = users[i]
