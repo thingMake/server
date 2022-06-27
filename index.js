@@ -1022,13 +1022,29 @@ router.get("/sessions", (req, res) => {
 router.get("/findEmail/*", async(req,res) => {
   var search = req.params[0]
   if(!search) return res.end()
-  var str = ""
   var users = await db.list("user:",true)
   for(var i in users){
     var u = users[i]
-    if(u.email && u.email.includes(search)) str += i+": "+u.email+"<br>"
+    if(u.email && u.email.includes(search)) res.write(i+": "+u.email+"\n")
   }
-  res.send(str)
+  res.end()
+})
+router.get("/findSimilarUsers/*", async(req,res) => {
+  var search = req.params[0]
+  if(!search) return res.end()
+  var user = await db.get("user:"+search)
+  if(!user) return res.send("invalid username")
+  var ip = user.ip
+  var users = await db.list("user:",true)
+  userLoop:for(var i in users){
+    var u = users[i]
+    if(!u.ip) continue
+    for(var i2 of u.ip) if(ip.includes(i2)){
+      res.write(u.username+"\n")
+      continue userLoop
+    }
+  }
+  res.end()
 })
 
 //cloud saves
