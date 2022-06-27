@@ -305,6 +305,7 @@ const validate = async(request, response, next) => {
             if(request.clientIp && !u.ip.includes(request.clientIp)) {
               u.ip.push(request.clientIp)
             }
+            u.lastActive = Date.now()
             db.set("user:"+request.username, u).then(() => {
               next()
             })
@@ -954,6 +955,15 @@ router.get("/comments/*", (req, res) => {
   db.get("post:"+id).then(r => {
     res.json(r.comments || [])
   }).catch(() => {res.send(null)})
+})
+router.get("/getLocalTime/", (req,res) => {
+  if(!req.query.time) return res.json({message:"need time parameter"})
+  var diff = Date.now() - parseFloat(req.query.time)
+  if(req.query.convert){
+    res.json({success:true,time:parseFloat(req.query.convert)+diff})
+  }else{
+    res.json({success:true,diff})
+  }
 })
 router.get("/clearNotifs", validate, (req, res) => {
   if(!req.username) return res.status(401).send("Unauthorized")
