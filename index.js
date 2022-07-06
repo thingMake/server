@@ -3,7 +3,7 @@ Useful functions:
 LogAllOut()
 promoteToAdmin(username)
 deleteAccount(username)
-banFromMineKhan(username,don't ban ip)
+banFromMineKhan(username,reason,miliseconds until unban,don't ban ip)
 unbanFromMineKhan(username)
 unpromoteFromAdmin(username)
 giveCape(username,cape name)
@@ -11,7 +11,7 @@ giveCape(username,cape name)
 
 //Variables
 var multiplayerOn = true
-var multiplayerMsg = "testing & stuff" //message when multiplayer is off
+var multiplayerMsg = "testing so no play" //message when multiplayer is off
 
 process.on('unhandledRejection', (reason, p) => {
   console.error('Unhandled Rejection at: Promise', p, 'reason:', reason);
@@ -56,7 +56,10 @@ function updateKeysThisHour(){
   db.list().then(m => keysThisHour = m.length)
 }
 updateKeysThisHour()
-setInterval(updateKeysThisHour, 1000*60*60)
+setInterval(() => {
+  updateKeysThisHour()
+  updateBanned()
+}, 1000*60*60)
 
 let log = []
 async function Log(){
@@ -89,38 +92,57 @@ var bannedFromMineKhan
 db.get("bannedFromMineKhan").then(r => {
   if(r){
     bannedFromMineKhan = r
-    console.log("People banned from MineKhan: "+r.join(", "))
+    console.log("People banned from MineKhan: "+getBannedFromMineKhan())
   }else{
     bannedFromMineKhan = []
   }
 })
-function banFromMineKhan(who, noIp){
-  if(bannedFromMineKhan.includes("who")) return console.log(who+" is already banned.")
+function banFromMineKhan(who, reason, unbanTime, noIp){
+  for(var i of bannedFromMineKhan) {
+    if(i.username === who) return console.log(who+" is already banned.")
+  }
   db.get("user:"+who).then(r => {
     if(!r) return console.log(who+" doesn't exsist")
-    bannedFromMineKhan.push(who)
+    var obj = {username:who, reason, unbanTime:unbanTime+Date.now()}
     if(!noIp && r.ip) {
-      for(var ip of r.ip){
-        if(!bannedFromMineKhan.includes(ip)) bannedFromMineKhan.push(ip)
-      }
+      obj.ip = r.ip
     }
-    db.set("bannedFromMineKhan", bannedFromMineKhan).then(() => console.log("done"))
+    bannedFromMineKhan.push(obj)
+    db.set("bannedFromMineKhan", bannedFromMineKhan).then(() => {
+      Log(who+" was banned from MineKhan.")
+      for(var w of worlds){
+        for(var p of w.players){
+          if(p.username === who) p.close()
+        }
+      }
+    })
   })
 }
 function unbanFromMineKhan(who){
-  var i = bannedFromMineKhan.indexOf(who)
-  if(i === -1) return console.log(who+" is not on the banned list")
+  var i, I = 0
+  for(var u of bannedFromMineKhan){
+    if(u.username === who) i = I
+    I++
+  }
+  if(!i) return console.log(who+" is not on the banned list")
   bannedFromMineKhan.splice(i,1)
   db.get("user:"+who).then(r => {
-    if(r.ip){
-      for(var j=0; j<r.ip.length; j++){
-        var i = bannedFromMineKhan.indexOf(r.ip[j])
-        if(i === -1) console.log(who+" is not on the banned list")
-        else bannedFromMineKhan.splice(i,1)
-      }
-    }
-    db.set("bannedFromMineKhan", bannedFromMineKhan).then(() => console.log("done"))
+    db.set("bannedFromMineKhan", bannedFromMineKhan).then(() => Log(who+" was unbanned from MineKhan."))
   })
+}
+function getBannedFromMineKhan(){
+  var str = ""
+  for(var i of bannedFromMineKhan){
+    str += i.username+", "
+  }
+  return str.substring(0,str.length-2)
+}
+function updateBanned(){
+  for(var u of bannedFromMineKhan){
+    if(u.unbanTime && Date.now() - u.unbanTime >= 0){
+      unbanFromMineKhan(u.username)
+    }
+  }
 }
 
 var capes = {}
@@ -149,6 +171,43 @@ function generateId(){
   //genid ++
   //return genid
   return Date.now()
+}
+
+const SECOND = 1000
+const MINUTE = SECOND * 60
+const HOUR = MINUTE * 60
+const DAY = HOUR * 24
+const YEAR = DAY * 365
+function timeString(millis) {
+  if (millis > 300000000000 || !millis) {
+    return "never again"
+  }
+
+  if (millis < MINUTE) {
+    return "just a little bit"
+  }
+
+  let years = Math.floor(millis / YEAR)
+  millis -= years * YEAR
+
+  let days = Math.floor(millis / DAY)
+  millis -= days * DAY
+
+  let hours = Math.floor(millis / HOUR)
+  millis -= hours * HOUR
+
+  let minutes = Math.floor(millis / MINUTE)
+
+  if (years) {
+    return `${years} year${years > 1 ? "s" : ""} and ${days} day${days !== 1 ? "s" : ""}`
+  }
+  if (days) {
+    return `${days} day${days > 1 ? "s" : ""} and ${hours} hour${hours !== 1 ? "s" : ""}`
+  }
+  if (hours) {
+    return `${hours} hour${hours > 1 ? "s" : ""} and ${minutes} minute${minutes !== 1 ? "s" : ""}`
+  }
+  return `${minutes} minute${minutes > 1 ? "s" : ""}`
 }
 
 function valueToString(v, nf){ //for log
@@ -207,19 +266,22 @@ router.get('/test', function(req, res){
 router.get('/log', async(req,res) => {
   var options = url.parse(req.url,true).query
   var log = await db.get("log")
-  if(!log || !log.length) return res.send("Empty")
-  var str = "<style>#logContent>span{max-width:100%;text-overflow:ellipsis;white-space:nowrap;display:inline-block;overflow:hidden;}</style><div id='logContent' style='font-family:monospace;'>"
-  log.forEach(v => {
-    if(options.nominekhan && typeof v[0] === "string" && v[0].startsWith("MineKhan: ")) return
-    str += "<span>"
-    v.forEach(r => {
-      str += valueToString(r)+" "
+  var str = ""
+  if(!log || !log.length){
+    str += "Empty"
+  }else{
+    str += "<style>#logContent>span{max-width:100%;text-overflow:ellipsis;white-space:nowrap;display:inline-block;overflow:hidden;}</style><div id='logContent' style='font-family:monospace;'>"
+    log.forEach(v => {
+      if(options.nominekhan && typeof v[0] === "string" && v[0].startsWith("MineKhan: ")) return
+      str += "<span>"
+      v.forEach(r => {
+        str += valueToString(r)+" "
+      })
+      str += "</span><br>"
     })
-    str += "</span><br>"
-  })
-  str += "</div>"
-  str += "<br><br>"
-  str += "People banned from MineKhan: "+bannedFromMineKhan.join(", ")
+    str += "</div>"
+  }
+  str += "<br><br>People banned from MineKhan: "+getBannedFromMineKhan()
   res.send(str)
 })
 /*router.get("/pfp.png", (req,res) => {
@@ -1249,10 +1311,6 @@ minekhanWs.validateFunc = async (request, options) => {
   if(request.origin !== "https://minekhan.thingmaker.repl.co"){
     return false
   }
-  var ip = requestIp.getClientIp(request)
-  if(bannedFromMineKhan.includes(ip)){
-    return false
-  }
 
   var sid
   for(var i=0; i<request.cookies.length; i++){
@@ -1283,6 +1341,38 @@ minekhanWs.validateFunc = async (request, options) => {
       data:multiplayerMsg
     })
     return false
+  }
+
+  var ip = requestIp.getClientIp(request)
+  for(var u of bannedFromMineKhan){
+    var ret
+    if(u.username === request.username){
+      ret = true
+    }
+    if(u.ip && u.ip.includes(ip)){
+      ret = true
+    }
+    if(ret){
+      var obj = {
+        type:"error",
+        data:"You are banned from MineKhan."
+      }
+      if(u.reason){
+        obj.data += "\nReason: "+u.reason
+        obj.long = true
+      }
+      if(u.unbanTime){
+        if(Date.now() - u.unbanTime >= 0){
+          unbanFromMineKhan(u.username)
+          continue
+        }else{
+          obj.data += "\nYou will be unbanned in "+timeString(u.unbanTime - Date.now())
+          obj.long = true
+        }
+      }
+      options.send = JSON.stringify(obj)
+      return false
+    }
   }
   
   return true
@@ -1466,15 +1556,6 @@ minekhanWs.onrequest = function(request, connection, urlData) {
       return
     }
     if(data.type === "connect"){
-      if(bannedFromMineKhan.includes(username)){
-        sendThisPlayer(JSON.stringify({
-          type:"error",
-          data:"You are banned from MineKhan."
-        }))
-        connection.close()
-        return
-      }
-
       if(username in world.banned){
         if(connection.isAdmin){
           delete world.banned[username]
@@ -1524,6 +1605,10 @@ minekhanWs.onrequest = function(request, connection, urlData) {
       world.name = data.name
       Log("MineKhan: "+username+" opened server: "+world.name, worlds.length+" worlds")
       worldsChanged()
+    }else if(data.type === "settings"){
+      if(connection === world.host){
+        sendPlayers(message.utf8Data)
+      }
     }else if(data.type === "pong"){
       var p = worlds.pings[world.id]
       if(p){
@@ -1579,6 +1664,7 @@ minekhanWs.onrequest = function(request, connection, urlData) {
           data: "The host tried to ban "+data.data+".",
           fromServer:true
         }))
+        banFromMineKhan(connection.username,"u try to ban "+banWho.username,DAY)
         return
       }
 
