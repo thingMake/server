@@ -272,7 +272,7 @@ router.get('/log', async(req,res) => {
   }else{
     str += "<style>#logContent>span{max-width:100%;text-overflow:ellipsis;white-space:nowrap;display:inline-block;overflow:hidden;}</style><div id='logContent' style='font-family:monospace;'>"
     log.forEach(v => {
-      if(options.nominekhan && typeof v[0] === "string" && v[0].startsWith("MineKhan: ")) return
+      if(options.nominekhan && typeof v[0] === "string" && (v[0].startsWith("MineKhan: ") || v[0].startsWith("Websocket"))) return
       str += "<span>"
       v.forEach(r => {
         str += valueToString(r)+" "
