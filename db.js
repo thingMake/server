@@ -40,7 +40,9 @@ module.exports = {
         if(prefix && !data.key.startsWith(prefix)){
           return
         }
-        if(values){
+        if(values === "raw"){
+          obj[data.key] = data.value
+        }else if(values){
           try{
             obj[data.key] = JSON.parse(data.value)
           }catch(e){

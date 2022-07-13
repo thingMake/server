@@ -1,6 +1,9 @@
 /*
 Useful functions:
 LogAllOut()
+deleteCloudSaves()
+findLongKeys()
+deleteLongKeys()
 promoteToAdmin(username)
 deleteAccount(username)
 banFromMineKhan(username,reason,miliseconds until unban,don't ban ip)
@@ -60,6 +63,23 @@ setInterval(() => {
   updateKeysThisHour()
   updateBanned()
 }, 1000*60*60)
+
+async function findLongKeys(){
+  var keys = await db.list("","raw")
+  for(var i in keys){
+    if(keys[i].length > 10000) console.log(i,"is very long.",keys[i].length,"characters")
+  }
+  console.log("done")
+}
+async function deleteLongKeys(){
+  var keys = await db.list("","raw")
+  var p = []
+  for(var i in keys){
+    if(keys[i].length > 10000) p.push(db.delete(i))
+  }
+  await Promise.all(p)
+  console.log("done")
+}
 
 let log = []
 async function Log(){
@@ -293,7 +313,7 @@ router.get("/panorama", (req,res) => {
 
 router.get("/common.js", (req,res) => {
   var str = ""
-  if(keysThisHour > Infinity){
+  if(true){
     str += "addBanner('Server low on or out of space. Please delete unused accounts and posts to allow other users to create accounts and login.');"
   }
   res.header("Content-Type", "application/javascript")
@@ -1227,6 +1247,17 @@ let serverPort = app.listen(3000, function(){
 
 function LogAllOut(){
   db.list("session:").then(m => {
+    var p = []
+    for(var i=0; i<m.length; i++){
+      p.push(db.delete(m[i]))
+    }
+    Promise.all(p).then(() => {
+      console.log("Done")
+    })
+  })
+}
+function deleteCloudSaves(){
+  db.list("saves:").then(m => {
     var p = []
     for(var i=0; i<m.length; i++){
       p.push(db.delete(m[i]))
