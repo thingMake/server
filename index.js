@@ -123,7 +123,8 @@ function banFromMineKhan(who, reason, unbanTime, noIp){
   }
   db.get("user:"+who).then(r => {
     if(!r) return console.log(who+" doesn't exsist")
-    var obj = {username:who, reason, unbanTime:unbanTime+Date.now()}
+    var obj = {username:who, reason, noIp:noIp}
+    if(unbanTime) obj.unbanTime = unbanTime+Date.now()
     if(!noIp && r.ip) {
       obj.ip = r.ip
     }
@@ -144,7 +145,7 @@ function unbanFromMineKhan(who){
     if(u.username === who) i = I
     I++
   }
-  if(!i) return console.log(who+" is not on the banned list")
+  if(i < 0) return console.log(who+" is not on the banned list")
   bannedFromMineKhan.splice(i,1)
   db.get("user:"+who).then(r => {
     db.set("bannedFromMineKhan", bannedFromMineKhan).then(() => Log(who+" was unbanned from MineKhan."))
