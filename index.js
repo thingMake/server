@@ -1140,6 +1140,15 @@ router.get("/findSimilarUsers/*", async(req,res) => {
   }
   res.end()
 })
+router.get("/findAdmins/", async(req,res) => {
+  var users = await db.list("user:",true)
+  for(var i in users){
+    if(users[i].admin){
+      res.write(users[i].username+"\n")
+    }
+  }
+  res.end()
+})
 
 //cloud saves
 router.get("/saves", validate, async(req,res) => {
