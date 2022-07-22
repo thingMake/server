@@ -3,7 +3,7 @@ Useful functions:
 LogAllOut()
 deleteCloudSaves()
 findLongKeys()
-deleteLongKeys()
+deleteUselessAccounts()
 promoteToAdmin(username)
 deleteAccount(username)
 banFromMineKhan(username,reason,miliseconds until unban,don't ban ip)
@@ -71,12 +71,21 @@ async function findLongKeys(){
   }
   console.log("done")
 }
-async function deleteLongKeys(){
-  var keys = await db.list("","raw")
+async function findUselessAccounts(g){
+  var keys = await db.list("user:",true)
   var p = []
   for(var i in keys){
-    if(keys[i].length > 10000) p.push(db.delete(i))
+    var k = keys[i]
+    if(!k || !k.bio && !k.bg && !k.skin){
+      p.push(i)
+    }
   }
+  if(g) return p
+  else console.log(p)
+}
+async function deleteUselessAccounts(){
+  var p = await findUselessAccounts(true)
+  for(var i of p) p[i] = db.delete(i)
   await Promise.all(p)
   console.log("done")
 }
